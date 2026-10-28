@@ -134,7 +134,7 @@
             background: #1e1e1e;
         }
 
-        /* BCT Schermen & Centrale Panel */
+        /* Schermen & Tabs */
         .bct-screen {
             flex: 1;
             padding: 15px;
@@ -146,15 +146,6 @@
 
         .bct-screen.active {
             display: flex;
-        }
-
-        #centrale-panel {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
         }
 
         /* BCT Navigatiebalk onderin (Tabs) */
@@ -170,7 +161,7 @@
             background: transparent;
             border: none;
             color: #bbb;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
             display: flex;
             flex-direction: column;
@@ -183,6 +174,11 @@
 
         .bct-nav-btn.active {
             background: #0078d7;
+            color: white;
+        }
+
+        .bct-nav-btn:hover:not(.active) {
+            background: #2d2d30;
             color: white;
         }
 
@@ -351,7 +347,6 @@
         <!-- 1. CHAUFFEUR BCT SCHERMEN -->
         <div id="driver-app" style="display: none; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
             
-            <!-- TAB 1: HOME / RITTEN SCHERM -->
             <div id="tab-ritten" class="bct-screen active">
                 <div class="bct-card">
                     <h3>📅 Mijn Ritten Vandaag</h3>
@@ -368,7 +363,6 @@
                 </div>
             </div>
 
-            <!-- TAB 2: COMMUNICATIE / CHAT SCHERM -->
             <div id="tab-chat" class="bct-screen">
                 <div class="bct-card" style="flex: 1; display: flex; flex-direction: column;">
                     <h3>💬 Berichten met Centrale</h3>
@@ -380,16 +374,13 @@
                 </div>
             </div>
 
-            <!-- TAB 3: SYSTEEM / INFO SCHERM -->
             <div id="tab-info" class="bct-screen">
                 <div class="bct-card">
                     <h3>ℹ️ Systeem & Info</h3>
                     <p>Verbinding: <span style="color: #107c41;">🟢 Online (Realtime)</span></p>
-                    <p style="margin-top: 10px;">Laatste synchronisatie met centrale is actief.</p>
                 </div>
             </div>
 
-            <!-- BCT NAVIGATIE ONDERIN (BCT TABS) -->
             <div class="bct-nav">
                 <button class="bct-nav-btn active" onclick="switchTab('ritten', this)">📋 Ritten</button>
                 <button class="bct-nav-btn" onclick="switchTab('chat', this)">💬 Berichten</button>
@@ -397,33 +388,52 @@
             </div>
         </div>
 
-        <!-- 2. CENTRALE SCHERM (Lenovo M10) -->
-        <div id="centrale-panel" style="display: none;">
-            <div class="bct-card">
-                <h3>📡 Centrale Dispatch - Actieve Voertuigen</h3>
-                <div id="tilesGrid" class="tiles-grid">
-                    <p>Wachten op actieve auto's...</p>
+        <!-- 2. CENTRALE SCHERM (Lenovo M10) MET ONDERSTE NAVIGATIEKNOPPEN -->
+        <div id="centrale-app" style="display: none; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            
+            <!-- TAB 1: COMMUNICATIE (Tegels & Overzicht) -->
+            <div id="centrale-tab-comm" class="bct-screen active">
+                <div class="bct-card">
+                    <h3>📡 Centrale Dispatch - Actieve Voertuigen</h3>
+                    <div id="tilesGrid" class="tiles-grid">
+                        <p>Wachten op actieve auto's...</p>
+                    </div>
+                </div>
+
+                <div class="bct-card">
+                    <h3>📢 Algemeen Bericht Sturen naar Iedereen</h3>
+                    <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's..." rows="2"></textarea>
+                    <button class="bct-btn bct-btn-blue" onclick="sendBroadcastMessage()">Verstuur naar Iedereen</button>
                 </div>
             </div>
 
-            <div class="bct-card">
-                <h3>📅 Planning & Ritten Inplannen</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><label>Datum:</label><input type="date" id="planDate"></div>
-                    <div><label>Tijd:</label><input type="time" id="planTime"></div>
+            <!-- TAB 2: PLANNING & RITTEN -->
+            <div id="centrale-tab-plan" class="bct-screen">
+                <div class="bct-card">
+                    <h3>📅 Planning & Ritten Inplannen</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div><label>Datum:</label><input type="date" id="planDate"></div>
+                        <div><label>Tijd:</label><input type="time" id="planTime"></div>
+                    </div>
+                    <label>Klant / Omschrijving:</label>
+                    <input type="text" id="planClient" placeholder="Naam klant...">
+                    <label>Adres / Bestemming:</label>
+                    <input type="text" id="planAddress" placeholder="Adres...">
+                    <label>Toewijzen aan Auto:</label>
+                    <select id="planCarSelect"><option value="">-- Kies auto --</option></select>
+                    <button class="bct-btn bct-btn-green" onclick="saveNewRide()">Rit Inplannen & Doorsturen</button>
                 </div>
-                <label>Klant / Omschrijving:</label>
-                <input type="text" id="planClient" placeholder="Naam klant...">
-                <label>Adres / Bestemming:</label>
-                <input type="text" id="planAddress" placeholder="Adres...">
-                <label>Toewijzen aan Auto:</label>
-                <select id="planCarSelect"><option value="">-- Kies auto --</option></select>
-                <button class="bct-btn bct-btn-green" onclick="saveNewRide()">Rit Inplannen & Doorsturen</button>
+
+                <div class="bct-card">
+                    <h3>📋 Alle Geplande Ritten (Overzicht)</h3>
+                    <ul id="allPlannedRidesList"><li>Geen ritten ingepland.</li></ul>
+                </div>
             </div>
 
-            <div class="bct-card">
-                <h3>📋 Alle Geplande Ritten (Overzicht)</h3>
-                <ul id="allPlannedRidesList"><li>Geen ritten ingepland.</li></ul>
+            <!-- CENTRALE NAVIGATIEBALK ONDERIN -->
+            <div class="bct-nav">
+                <button class="bct-nav-btn active" onclick="switchCentraleTab('comm', this)">📡 Communicatie</button>
+                <button class="bct-nav-btn" onclick="switchCentraleTab('plan', this)">📅 Planning & Ritten</button>
             </div>
         </div>
     </div>
@@ -486,7 +496,7 @@
         const roleInput = document.getElementById('roleInput');
         const btnLogin = document.getElementById('btnLogin');
         const appContainer = document.getElementById('app-container');
-        const centralePanel = document.getElementById('centrale-panel');
+        const centraleApp = document.getElementById('centrale-app');
         const driverApp = document.getElementById('driver-app');
         const bctHeaderBar = document.getElementById('bctHeaderBar');
 
@@ -500,7 +510,7 @@
             appContainer.style.display = 'flex';
 
             if (myRole === 'Centrale') {
-                centralePanel.style.display = 'flex';
+                centraleApp.style.display = 'flex';
                 document.getElementById('planDate').value = todayStr;
                 initCentrale();
             } else {
@@ -517,12 +527,21 @@
             document.getElementById('bctClock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }, 1000);
 
-        // BCT Tabwisseling
+        // Tabwisseling Auto
         window.switchTab = function(tabName, btnElement) {
-            document.querySelectorAll('.bct-screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.bct-nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#driver-app .bct-screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('#driver-app .bct-nav-btn').forEach(b => b.classList.remove('active'));
             
             document.getElementById('tab-' + tabName).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // Tabwisseling Centrale
+        window.switchCentraleTab = function(tabName, btnElement) {
+            document.querySelectorAll('#centrale-app .bct-screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('#centrale-app .bct-nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById('centrale-tab-' + tabName).classList.add('active');
             btnElement.classList.add('active');
         }
 
@@ -613,7 +632,6 @@
             const planCarSelect = document.getElementById('planCarSelect');
             const allPlannedRidesList = document.getElementById('allPlannedRidesList');
 
-            // Actieve auto's ophalen voor tegels en selectie
             db.ref('cars').on('value', (snapshot) => {
                 const cars = snapshot.val();
                 tilesGrid.innerHTML = "";
@@ -643,7 +661,6 @@
                 }
             });
 
-            // Geplande ritten ophalen en tonen in het overzicht
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 let html = "";
@@ -672,6 +689,18 @@
             document.getElementById('planClient').value = "";
             document.getElementById('planAddress').value = "";
             alert(`Rit ingepland voor ${car} op ${date} om ${time}!`);
+        }
+
+        window.sendBroadcastMessage = function() {
+            const text = document.getElementById('broadcastInput').value.trim();
+            if (!text) return;
+
+            db.ref('broadcast').set({
+                text: text,
+                time: new Date().toLocaleTimeString()
+            });
+            document.getElementById('broadcastInput').value = "";
+            alert("Broadcast verzonden naar iedereen!");
         }
 
         function openModal(car) {
