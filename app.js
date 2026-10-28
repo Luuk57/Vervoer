@@ -11,37 +11,89 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let currentUser = "";
+
+// Elementen
+const loginScreen = document.getElementById('login-screen');
+const usernameInput = document.getElementById('usernameInput');
+const btnLogin = document.getElementById('btnLogin');
+const currentUserName = document.getElementById('currentUserName');
+
 const statusInput = document.getElementById('statusInput');
 const numberValue = document.getElementById('numberValue');
-const liveStatusDisplay = document.getElementById('liveStatusDisplay');
-const liveValueDisplay = document.getElementById('liveValueDisplay');
+const activeUsersList = document.getElementById('activeUsersList');
 
-statusInput.addEventListener('input', (e) => {
-    db.ref('liveData/statusText').set(e.target.value);
+// --- LOGIN AFHANDELING ---
+btnLogin.addEventListener('click', () => {
+    const name = usernameInput.value.trim();
+    if (name === "") {
+        alert("Vul een naam of voertuignummer in.");
+        return;
+    }
+
+    currentUser = name;
+    currentUserName.innerText = currentUser;
+    loginScreen.style.display = 'none'; // Verberg login scherm
+
+    // Registreer dit apparaat direct in de database
+    updateMyData();
 });
 
-numberValue.addEventListener('input', (e) => {
-    db.ref('liveData/numberVal').set(e.target.value);
-});
+// Stuur wijzigingen door naar Firebase onder een uniek pad voor deze gebruiker
+function updateMyData() {
+    if (!currentUser) return;
 
-db.ref('liveData').on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-        if (data.statusText !== undefined) {
-            liveStatusDisplay.innerText = data.statusText;
-            if (document.activeElement !== statusInput) {
-                statusInput.value = data.statusText;
-            }
-        }
-        if (data.numberVal !== undefined) {
-            liveValueDisplay.innerText = data.numberVal;
-            if (document.activeElement !== numberValue) {
-                numberValue.value = data.numberVal;
-            }
-        }
+    const userRef = db.ref('ritten/' + currentUser);
+    userRef.set({
+        name: currentUser,
+        status: statusInput.value || "Online",
+        value: numberValue.value || "0",
+        lastUpdate: new Date().toLocaleTimeString()
+    });
+}
+
+statusInput.addEventListener('input', updateMyData);
+numberValue.addEventListener('input', updateMyData);
+
+// --- CENTRALE OVERZICHT (Leest alle actieve apparaten uit) ---
+db.ref('ritten').on('value', (snapshot) => {
+    const allRitten = snapshot.val();
+    activeUsersList.innerHTML = ""; // Maak lijst leeg en bouw opnieuw op
+
+    if (allRitten) {
+        Object.keys(allRitten).forEach((key) => {
+            const data = allRitten[key];
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${data.name}</strong>: ${data.status} (Waarde: ${data.value}) <br><small style="color:gray;">Laatste update: ${data.lastUpdate || '-'}</small>`;
+            activeUsersList.appendChild(li);
+        });
+    } else {
+        activeUsersList.innerHTML = "<li>Nog geen actieve ritten/apparaten.</li>";
     }
 });
 
+// --- GPS FUNCTIONALITEIT ---
+document.getElementById('btnGps').addEventListener('click', () => {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            document.getElementById('lat').innerText = lat.toFixed(5);
+            document.getElementById('lng').innerText = lng.toFixed(5);
+            
+            // Stuur GPS ook mee naar de database voor deze gebruiker
+            if (currentUser) {
+                db.ref('ritten/' + currentUser + '/gps').set({ lat: lat, lng: lng });
+            }
+        }, (err) => {
+            alert("GPS fout: " + err.message);
+        }, { enableHighAccuracy: true });
+    } else {
+        alert("Geolocatie wordt niet ondersteund.");
+    }
+});
+
+// --- WINDOWS UI ---
 function updateClock() {
     const now = new Date();
     document.getElementById('clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -62,22 +114,6 @@ document.querySelectorAll('.taskbar-item').forEach(item => {
         const win = document.getElementById(winId);
         win.classList.toggle('minimized');
     });
-});
-
-document.getElementById('btnGps').addEventListener('click', () => {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.watchPosition((pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            document.getElementById('lat').innerText = lat.toFixed(5);
-            document.getElementById('lng').innerText = lng.toFixed(5);
-            db.ref('liveData/gps').set({ lat: lat, lng: lng });
-        }, (err) => {
-            alert("GPS fout: " + err.message);
-        }, { enableHighAccuracy: true });
-    } else {
-        alert("Geolocatie wordt niet ondersteund.");
-    }
 });
 
 if ('serviceWorker' in navigator) {
