@@ -140,6 +140,7 @@
             border-radius: 4px;
             font-weight: bold;
             cursor: pointer;
+            width: 100%;
         }
 
         button.action-btn:hover {
@@ -198,7 +199,7 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 100vw;
+            height: 100vh;
             background: rgba(0, 0, 0, 0.7);
             display: flex;
             justify-content: center;
@@ -210,16 +211,77 @@
         .modal-box {
             background: white;
             color: #333;
-            padding: 25px;
+            padding: 20px;
             border-radius: 8px;
             width: 100%;
-            max-width: 450px;
+            max-width: 480px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        .modal-box h3 {
-            color: #0078d7;
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
+        }
+
+        .modal-header h3 {
+            color: #0078d7;
+            margin: 0;
+        }
+
+        .close-x-btn {
+            background: #e81123;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-x-btn:hover {
+            background: #a80710;
+        }
+
+        /* Chat historie box */
+        .chat-history {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+            height: 140px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-msg {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            max-width: 85%;
+        }
+
+        .chat-msg.centrale {
+            background: #d0e1fd;
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        .chat-msg.auto {
+            background: #e2e2e2;
+            align-self: flex-start;
         }
 
         /* Status tegels binnen de popup */
@@ -227,18 +289,18 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
-            margin: 15px 0;
+            margin: 8px 0;
         }
 
         .status-tile {
-            padding: 10px;
+            padding: 8px;
             border: none;
             border-radius: 4px;
             font-weight: bold;
             color: white;
             cursor: pointer;
             text-align: center;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .status-aangemeld { background: #107c41; }
@@ -250,15 +312,20 @@
             opacity: 0.85;
         }
 
-        .modal-close-btn {
-            background: #666;
+        .modal-bottom-btn {
+            background: #444;
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 10px;
             border-radius: 4px;
             cursor: pointer;
-            margin-top: 10px;
+            font-weight: bold;
             width: 100%;
+            margin-top: 10px;
+        }
+
+        .modal-bottom-btn:hover {
+            background: #222;
         }
 
         ul { list-style: none; }
@@ -296,19 +363,18 @@
                 <button class="status-tile status-afgemeld" onclick="setMyStatus('Afgemeld')">Afgemeld</button>
             </div>
 
-            <label>Of typ een eigen status/bericht naar centrale:</label>
-            <input type="text" id="autoStatusInput" placeholder="Bijv. Onderweg naar klant...">
-            <button class="action-btn" id="btnSendAutoStatus">Stuur naar Centrale</button>
+            <label>Stuur bericht naar Centrale:</label>
+            <input type="text" id="autoStatusInput" placeholder="Typ je bericht...">
+            <button class="action-btn" id="btnSendAutoStatus">Verstuur Bericht</button>
             
-            <h3 style="margin-top: 15px;">📥 Berichten van Centrale:</h3>
+            <h3 style="margin-top: 15px;">📥 Berichten (Privé & Algemeen):</h3>
             <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
         </div>
 
         <!-- VOOR DE CENTRALE (LENOVO M10) -->
         <div id="centrale-panel" class="panel" style="display: none;">
-            <h3>📡 Centrale Tegel-Overzicht (Klik op een auto voor details & berichten)</h3>
+            <h3>📡 Centrale Tegel-Overzicht (Klik op een auto voor chat & details)</h3>
             <div id="tilesGrid" class="tiles-grid">
-                <!-- Hier komen de tegels per auto -->
                 <p>Wachten op actieve auto's...</p>
             </div>
 
@@ -318,25 +384,30 @@
         </div>
     </div>
 
-    <!-- POPUP VOOR DE CENTRALE (WANNEER JE OP EEN TEGEL KLIKT) -->
+    <!-- POPUP VOOR DE CENTRALE (CHAT & DETAILS) -->
     <div id="centralModal" class="modal-overlay" style="display: none;">
         <div class="modal-box">
-            <h3 id="modalCarTitle">Auto Details</h3>
-            <p><strong>Huidige Status:</strong> <span id="modalCarStatus">-</span></p>
+            <div class="modal-header">
+                <h3 id="modalCarTitle">Auto Details</h3>
+                <button class="close-x-btn" onclick="closeModal()">×</button>
+            </div>
             
-            <div style="margin-top: 15px;">
-                <label><strong>Laatste Bericht van Auto:</strong></label>
-                <p id="modalCarMessage" style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-top: 5px; font-style: italic;">Geen bericht.</p>
+            <p style="font-size: 13px; margin-bottom: 8px;"><strong>Status:</strong> <span id="modalCarStatus">-</span></p>
+            
+            <div>
+                <label style="font-size: 12px; font-weight: bold;">Chat Geschiedenis:</label>
+                <div id="modalChatHistory" class="chat-history">
+                    <!-- Berichten komen hier -->
+                </div>
             </div>
 
-            <div style="margin-top: 15px;">
-                <label><strong>Stuur privébericht / antwoord naar deze auto:</strong></label>
-                <input type="text" id="modalReplyInput" placeholder="Typ antwoord...">
+            <div style="margin-bottom: 8px;">
+                <input type="text" id="modalReplyInput" placeholder="Typ antwoord naar auto..." style="margin-bottom: 5px;">
                 <button class="action-btn" onclick="sendReplyFromModal()">Verstuur Antwoord</button>
             </div>
 
-            <div style="margin-top: 15px;">
-                <label><strong>Stel status in voor deze auto:</strong></label>
+            <div>
+                <label style="font-size: 12px; font-weight: bold;">Stel status in voor deze auto:</label>
                 <div class="status-tiles-container">
                     <button class="status-tile status-aangemeld" onclick="setCarStatusFromModal('Aangemeld')">Aangemeld</button>
                     <button class="status-tile status-bezet" onclick="setCarStatusFromModal('Bezet')">Bezet</button>
@@ -345,7 +416,7 @@
                 </div>
             </div>
 
-            <button class="modal-close-btn" onclick="closeModal()">Sluiten</button>
+            <button class="modal-bottom-btn" onclick="closeModal()">Popup Sluiten</button>
         </div>
     </div>
 
@@ -405,8 +476,8 @@
 
         // --- FUNCTIES VOOR AUTO ---
         window.setMyStatus = function(statusText) {
-            updateCarDataInFirebase(statusText, "Status gewijzigd naar " + statusText);
-            alert("Status ingesteld op: " + statusText);
+            updateCarStatusInFirebase(statusText);
+            stuurChatBericht("Status gewijzigd naar: " + statusText, "auto");
         }
 
         function initAuto() {
@@ -414,54 +485,65 @@
             const btnSend = document.getElementById('btnSendAutoStatus');
             const messagesForMe = document.getElementById('messagesForMe');
 
-            // Standaard aanmelden bij start
-            updateCarDataInFirebase("Aangemeld", "Ingeklokt");
+            // Aanmelden bij start
+            updateCarStatusInFirebase("Aangemeld");
 
             btnSend.addEventListener('click', () => {
                 const msg = statusInput.value.trim();
                 if (!msg) return;
-                updateCarDataInFirebase("Bezet", msg);
+                stuurChatBericht(msg, "auto");
                 statusInput.value = "";
-                alert("Bericht verzonden naar centrale!");
             });
 
-            // Berichten van centrale ontvangen (zowel broadcast als privé)
-            let laatsteBroadcast = "";
-            let laatstePrive = "";
+            // Luisteren naar chatberichten voor deze auto
+            db.ref('chats/' + myName).on('value', (snapshot) => {
+                const chats = snapshot.val();
+                let html = "";
+                if (chats) {
+                    Object.keys(chats).forEach(key => {
+                        const c = chats[key];
+                        let stijl = c.sender === 'centrale' ? 'background: #fff3cd; border-left: 4px solid #ffc107;' : 'background: #f0f4f8;';
+                        html += `<li style="${stijl}"><strong>${c.senderName} (${c.time}):</strong> ${c.text}</li>`;
+                    });
+                } else {
+                    html = "<li>Nog geen berichten.</li>";
+                }
+                messagesForMe.innerHTML = html;
+            });
 
+            // Luisteren naar algemene broadcast berichten
             db.ref('broadcast').on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    laatsteBroadcast = `<li><strong>📢 Centrale (${data.time}):</strong> ${data.text}</li>`;
-                    updateBerichtenLijst(messagesForMe, laatsteBroadcast, laatstePrive);
-                }
-            });
-
-            db.ref('cars/' + myName + '/privateMessage').on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    laatstePrive = `<li style="background: #fff3cd; border-left: 4px solid #ffc107;"><strong>🔒 Privé van Centrale (${data.time}):</strong> ${data.text}</li>`;
-                    updateBerichtenLijst(messagesForMe, laatsteBroadcast, laatstePrive);
+                    const li = document.createElement('li');
+                    li.style.background = '#e1ecf4';
+                    li.innerHTML = `<strong>📢 Centrale Broadcast (${data.time}):</strong> ${data.text}`;
+                    messagesForMe.prepend(li);
                 }
             });
         }
 
-        function updateCarDataInFirebase(status, message) {
+        function updateCarStatusInFirebase(status) {
             db.ref('cars/' + myName).update({
                 name: myName,
                 status: status,
-                lastMessage: message,
-                hasUnreadMessage: true, // Markeer als ongelezen zodat centrale gaat knipperen
                 lastUpdate: new Date().toLocaleTimeString()
             });
         }
 
-        function updateBerichtenLijst(container, broadcast, prive) {
-            let html = "";
-            if (prive) html += prive;
-            if (broadcast) html += broadcast;
-            if (!html) html = "<li>Nog geen berichten.</li>";
-            container.innerHTML = html;
+        function stuurChatBericht(tekst, senderType) {
+            const newMsgRef = db.ref('chats/' + myName).push();
+            newMsgRef.set({
+                sender: senderType,
+                senderName: myName,
+                text: tekst,
+                time: new Date().toLocaleTimeString()
+            });
+
+            db.ref('cars/' + myName).update({
+                hasUnreadMessage: true,
+                lastUpdate: new Date().toLocaleTimeString()
+            });
         }
 
         // --- FUNCTIES VOOR CENTRALE ---
@@ -470,7 +552,7 @@
             const broadcastInput = document.getElementById('broadcastInput');
             const btnSendBroadcast = document.getElementById('btnSendBroadcast');
 
-            // Luisteren naar alle auto's voor het tegel-overzicht
+            // Luisteren naar alle auto's voor tegels
             db.ref('cars').on('value', (snapshot) => {
                 const cars = snapshot.val();
                 tilesGrid.innerHTML = "";
@@ -480,17 +562,15 @@
                         const car = cars[key];
                         const tile = document.createElement('div');
                         
-                        // Bepaal of tegel moet knipperen (als er een ongelezen bericht is)
                         let knipperClass = car.hasUnreadMessage ? "knipperen" : "";
                         tile.className = `car-tile ${knipperClass}`;
 
                         tile.innerHTML = `
                             <h4>${car.name}</h4>
                             <p><strong>Status:</strong> ${car.status || 'Onbekend'}</p>
-                            <p style="font-size: 11px; color: #777; margin-top: 4px;">Laatste update: ${car.lastUpdate || '-'}</p>
+                            <p style="font-size: 11px; color: #777; margin-top: 4px;">Update: ${car.lastUpdate || '-'}</p>
                         `;
 
-                        // Als je op de tegel klikt, open je de modal/popup
                         tile.addEventListener('click', () => {
                             openModal(car);
                         });
@@ -511,41 +591,65 @@
                     time: new Date().toLocaleTimeString()
                 });
                 broadcastInput.value = "";
-                alert("Bericht verzonden naar iedereen!");
+                alert("Broadcast verzonden naar iedereen!");
             });
         }
 
-        // Open popup voor een specifieke auto
+        // Open popup en laad de chatgeschiedenis
         function openModal(car) {
             selectedCarForModal = car.name;
-            document.getElementById('modalCarTitle').innerText = "Auto: " + car.name;
+            document.getElementById('modalCarTitle').innerText = "Chat met: " + car.name;
             document.getElementById('modalCarStatus').innerText = car.status || "Onbekend";
-            document.getElementById('modalCarMessage').innerText = car.lastMessage || "Geen recent bericht.";
             document.getElementById('modalReplyInput').value = "";
             document.getElementById('centralModal').style.display = 'flex';
 
-            // Zodra je de tegel opent, zetten we het ongelezen vinkje uit (stopt met knipperen)
+            // Stop knipperen
             db.ref('cars/' + car.name).update({ hasUnreadMessage: false });
+
+            // Laad live chatgeschiedenis voor deze auto in de popup
+            db.ref('chats/' + car.name).on('value', (snapshot) => {
+                const chats = snapshot.val();
+                const historyBox = document.getElementById('modalChatHistory');
+                let html = "";
+
+                if (chats) {
+                    Object.keys(chats).forEach(key => {
+                        const c = chats[key];
+                        let msgClass = c.sender === 'centrale' ? 'centrale' : 'auto';
+                        html += `<div class="chat-msg ${msgClass}"><strong>${c.senderName} (${c.time}):</strong><br>${c.text}</div>`;
+                    });
+                } else {
+                    html = "<p style='color:#777; text-align:center;'>Nog geen berichten gewisseld.</p>";
+                }
+                historyBox.innerHTML = html;
+                historyBox.scrollTop = historyBox.scrollHeight;
+            });
         }
 
         window.closeModal = function() {
             document.getElementById('centralModal').style.display = 'none';
+            if (selectedCarForModal) {
+                db.ref('chats/' + selectedCarForModal).off();
+            }
         }
 
-        // Antwoord sturen vanuit de modal
+        // Antwoord sturen vanuit de modal naar de auto
         window.sendReplyFromModal = function() {
             const text = document.getElementById('modalReplyInput').value.trim();
             if (!text || !selectedCarForModal) return;
 
-            db.ref('cars/' + selectedCarForModal + '/privateMessage').set({
+            const newMsgRef = db.ref('chats/' + selectedCarForModal).push();
+            newMsgRef.set({
+                sender: 'centrale',
+                senderName: 'Centrale',
                 text: text,
                 time: new Date().toLocaleTimeString()
             });
+
             document.getElementById('modalReplyInput').value = "";
-            alert("Antwoord verzonden naar " + selectedCarForModal + "!");
         }
 
-        // Status van auto wijzigen vanuit de modal door de centrale
+        // Status wijzigen vanuit de modal
         window.setCarStatusFromModal = function(newStatus) {
             if (!selectedCarForModal) return;
 
@@ -554,7 +658,6 @@
                 lastUpdate: new Date().toLocaleTimeString()
             });
             document.getElementById('modalCarStatus').innerText = newStatus;
-            alert(`Status van ${selectedCarForModal} gewijzigd naar ${newStatus}`);
         }
 
         // Inline Service Worker voor PWA
