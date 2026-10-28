@@ -154,11 +154,37 @@
 
         ul li {
             background: #f0f4f8;
-            padding: 8px 10px;
+            padding: 10px;
             margin-bottom: 6px;
             border-radius: 4px;
             border-left: 4px solid #0078d7;
             font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .car-info {
+            flex: 1;
+        }
+
+        .private-btn {
+            background: #0078d7;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .private-btn:hover {
+            background: #005a9e;
+        }
+
+        .private-msg-box {
+            background: #fff3cd;
+            border-left-color: #ffc107;
         }
     </style>
 </head>
@@ -184,23 +210,24 @@
 
         <!-- VOOR AUTO'S / CHAUFFEURS -->
         <div id="auto-panel" class="panel" style="display: none;">
-            <h3>🚗 Mijn Status & Bericht</h3>
+            <h3>🚗 Mijn Status</h3>
             <label>Status update:</label>
             <input type="text" id="autoStatusInput" placeholder="Bijv. Onderweg naar bestemming...">
             <button class="action-btn" id="btnSendAutoStatus">Update Status</button>
             
-            <h3 style="margin-top: 15px;">📥 Berichten van Centrale:</h3>
-            <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
+            <h3 style="margin-top: 15px;">📥 Berichten (Algemeen & Privé):</h3>
+            <ul id="messagesForMe" style="display: block;"><li>Nog geen berichten.</li></ul>
         </div>
 
         <!-- VOOR DE CENTRALE (LENOVO M10) -->
         <div id="centrale-panel" class="panel" style="display: none;">
-            <h3>📡 Centrale Overzicht: Alle Actieve Apparaten</h3>
+            <h3>📡 Centrale Overzicht: Actieve Apparaten</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">Klik op 'Privébericht' bij een auto om direct te appen.</p>
             <ul id="allUsersList"><li>Wachten op actieve apparaten...</li></ul>
 
             <h3 style="margin-top: 20px;">📢 Algemeen Bericht Sturen naar Iedereen</h3>
             <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's en centrales..."></textarea>
-            <button class="action-btn" id="btnSendBroadcast">Verstuur naar iedereen</button>
+            <button class="action-btn" id="btnSendBroadcast">Verstuur naar Iedereen</button>
         </div>
     </div>
 
@@ -248,7 +275,6 @@
             appContainer.style.display = 'flex';
             roleDisplay.innerText = `${myName} (${myRole})`;
 
-            // DIRECT bij inloggen registreren in Firebase onder 'users'
             registerInFirebase("Online");
 
             if (myRole === 'Centrale') {
@@ -275,19 +301,40 @@
             const btnSend = document.getElementById('btnSendAutoStatus');
             const messagesForMe = document.getElementById('messagesForMe');
 
-            // Status updaten wanneer je op de knop klikt
             btnSend.addEventListener('click', () => {
                 registerInFirebase(statusInput.value || "Online");
-                alert("Status bijgewerkt en verzonden naar centrale!");
+                alert("Status bijgewerkt!");
             });
 
-            // Luisteren naar algemene berichten van de centrale
+            // Opslag voor inkomende berichten
+            let laatsteBroadcast = "";
+            let laatstePrive = "";
+
+            // Luisteren naar algemene berichten
             db.ref('broadcast').on('value', (snapshot) => {
                 const msg = snapshot.val();
                 if (msg) {
-                    messagesForMe.innerHTML = `<li><strong>Centrale (${msg.time}):</strong> ${msg.text}</li>`;
+                    laatsteBroadcast = `<li><strong>📢 Centrale (${msg.time}):</strong> ${msg.text}</li>`;
+                    updateBerichtenLijst(messagesForMe, laatsteBroadcast, laatstePrive);
                 }
             });
+
+            // Luisteren naar SPECIFIEKE privéberichten voor deze auto
+            db.ref('privateMessages/' + myName).on('value', (snapshot) => {
+                const msg = snapshot.val();
+                if (msg) {
+                    laatstePrive = `<li class="private-msg-box"><div class="car-info"><strong>🔒 Privé van Centrale (${msg.time}):</strong> ${msg.text}</div></li>`;
+                    updateBerichtenLijst(messagesForMe, laatsteBroadcast, laatstePrive);
+                }
+            });
+        }
+
+        function updateBerichtenLijst(container, broadcast, prive) {
+            let html = "";
+            if (prive) html += prive;
+            if (broadcast) html += broadcast;
+            if (!html) html = "<li>Nog geen berichten.</li>";
+            container.innerHTML = html;
         }
 
         // --- FUNCTIES VOOR CENTRALE ---
@@ -296,7 +343,7 @@
             const broadcastInput = document.getElementById('broadcastInput');
             const btnSendBroadcast = document.getElementById('btnSendBroadcast');
 
-            // Luisteren naar ALLE actieve gebruikers (zowel auto's als centrales)
+            // Luisteren naar alle actieve gebruikers
             db.ref('users').on('value', (snapshot) => {
                 const users = snapshot.val();
                 allUsersList.innerHTML = "";
@@ -304,7 +351,21 @@
                     Object.keys(users).forEach(key => {
                         const user = users[key];
                         const li = document.createElement('li');
-                        li.innerHTML = `<strong>[${user.role}] ${user.name}</strong><br>Status: ${user.status} <br><small style="color:gray;">Laatste update: ${user.lastUpdate}</small>`;
+                        
+                        let actieKnop = "";
+                        // Als het een auto is, tonen we een knop om een privébericht te sturen
+                        if (user.role === 'Auto') {
+                            actieKnop = `<button class="private-btn" onclick="stuurPriveBericht('${user.name}')">Privébericht</button>`;
+                        }
+
+                        li.innerHTML = `
+                            <div class="car-info">
+                                <strong>[${user.role}] ${user.name}</strong><br>
+                                Status: ${user.status} <br>
+                                <small style="color:gray;">Laatste update: ${user.lastUpdate}</small>
+                            </div>
+                            ${actieKnop}
+                        `;
                         allUsersList.appendChild(li);
                     });
                 } else {
@@ -325,6 +386,18 @@
                 alert("Bericht verzonden naar iedereen!");
             });
         }
+
+        // Functie om een privébericht te sturen naar een specifieke auto
+        window.stuurPriveBericht = function(autoNaam) {
+            const bericht = prompt(`Typ een privébericht voor ${autoNaam}:`);
+            if (!bericht) return;
+
+            db.ref('privateMessages/' + autoNaam).set({
+                text: bericht,
+                time: new Date().toLocaleTimeString()
+            });
+            alert(`Privébericht verzonden naar ${autoNaam}!`);
+        };
 
         // Inline Service Worker voor PWA
         if ('serviceWorker' in navigator) {
