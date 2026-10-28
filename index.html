@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vervoer Centrale & Planning</title>
+    <title>Vervoer BCT & Centrale</title>
 
     <!-- Inline Web App Manifest (PWA) -->
     <link rel="manifest" href='data:application/manifest+json,{
-        "name": "Vervoer Dashboard",
-        "short_name": "VervoerDB",
+        "name": "Vervoer BCT",
+        "short_name": "BCT",
         "start_url": "./index.html",
         "display": "standalone",
-        "background_color": "#0078d7",
-        "theme_color": "#0078d7",
+        "background_color": "#121212",
+        "theme_color": "#121212",
         "icons": [{
             "src": "https://cdn-icons-png.flaticon.com/512/220/220212.png",
             "sizes": "192x192",
@@ -20,19 +20,20 @@
         }]
     }'>
 
-    <!-- Opmaak (CSS) -->
+    <!-- Opmaak (CSS) - BCT Taxi Stijl -->
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             height: 100vh;
             overflow: hidden;
-            background: #0078d7 url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+            background: #1e1e1e;
+            color: #fff;
             display: flex;
             flex-direction: column;
         }
@@ -44,7 +45,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -53,32 +54,34 @@
         }
 
         .login-box {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #2d2d30;
             padding: 30px;
             border-radius: 8px;
             width: 100%;
             max-width: 380px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            border: 1px solid #3f3f46;
         }
 
         .login-box h2 {
             margin-bottom: 10px;
-            color: #333;
+            color: #0078d7;
         }
 
         .login-box p {
             margin-bottom: 15px;
             font-size: 14px;
-            color: #666;
+            color: #bbb;
         }
 
         .login-box input, .login-box select {
             width: 100%;
             padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #ccc;
+            background: #1e1e1e;
+            border: 1px solid #555;
+            color: white;
             border-radius: 4px;
             font-size: 16px;
         }
@@ -99,56 +102,174 @@
             background: #005a9e;
         }
 
-        /* Interface na inloggen */
+        /* BCT Header (Statusbalk bovenin) */
+        .bct-header {
+            background: #252526;
+            border-bottom: 2px solid #3f3f46;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .bct-status-indicator {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .status-aangemeld { background: #107c41; color: white; }
+        .status-bezet { background: #d83b01; color: white; }
+        .status-pauze { background: #ffb900; color: #000; }
+        .status-afgemeld { background: #8a8886; color: white; }
+
+        /* App Container */
         #app-container {
             flex: 1;
-            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            overflow: hidden;
+            background: #1e1e1e;
+        }
+
+        /* BCT Schermen (Tabs) */
+        .bct-screen {
+            flex: 1;
+            padding: 15px;
             overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .bct-screen.active {
+            display: flex;
+        }
+
+        /* BCT Navigatiebalk onderin (Tabs) */
+        .bct-nav {
+            height: 60px;
+            background: #252526;
+            border-top: 2px solid #3f3f46;
+            display: flex;
+        }
+
+        .bct-nav-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #bbb;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-right: 1px solid #3f3f46;
+            transition: 0.2s;
+        }
+
+        .bct-nav-btn.active {
+            background: #0078d7;
             color: white;
         }
 
-        .panel {
-            background: rgba(255, 255, 255, 0.92);
-            color: #333;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            margin-bottom: 15px;
+        .bct-nav-btn:hover:not(.active) {
+            background: #2d2d30;
+            color: white;
         }
 
-        .panel h3 {
-            margin-bottom: 10px;
+        /* Panels & Kaarten in BCT stijl */
+        .bct-card {
+            background: #2d2d30;
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .bct-card h3 {
             color: #0078d7;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #3f3f46;
+            padding-bottom: 5px;
         }
 
-        input[type="text"], input[type="date"], input[type="time"], select, textarea {
+        /* Status Grid knoppen */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .bct-btn {
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: center;
+            color: white;
+        }
+        .bct-btn-green { background: #107c41; }
+        .bct-btn-orange { background: #d83b01; }
+        .bct-btn-yellow { background: #ffb900; color: #000; }
+        .bct-btn-grey { background: #666; }
+        .bct-btn-blue { background: #0078d7; }
+
+        .bct-btn:active { opacity: 0.8; }
+
+        /* Formulierelementen */
+        input, select, textarea {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #ccc;
+            background: #1e1e1e;
+            border: 1px solid #555;
+            color: white;
             border-radius: 4px;
             font-size: 14px;
         }
 
-        button.action-btn {
-            background: #107c41;
-            color: white;
-            border: none;
-            padding: 10px 15px;
+        /* Lijsten en Chat */
+        ul { list-style: none; }
+        ul li {
+            background: #252526;
+            padding: 10px;
+            margin-bottom: 8px;
             border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
+            border-left: 4px solid #0078d7;
+            font-size: 13px;
         }
 
-        button.action-btn:hover {
-            background: #0b5a30;
+        .chat-history {
+            background: #1e1e1e;
+            border: 1px solid #3f3f46;
+            border-radius: 4px;
+            padding: 10px;
+            height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
         }
 
-        /* TEGELS GRID VOOR DE CENTRALE */
+        .chat-msg {
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            max-width: 85%;
+        }
+        .chat-msg.centrale { background: #004578; align-self: flex-end; }
+        .chat-msg.auto { background: #333337; align-self: flex-start; }
+
+        /* Centrale Tegels Grid */
         .tiles-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -157,184 +278,44 @@
         }
 
         .car-tile {
-            border: 2px solid #ccc;
-            border-radius: 8px;
+            border: 2px solid #555;
+            border-radius: 6px;
             padding: 15px;
             text-align: center;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-            color: #333;
+            background: #2d2d30;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
+        .car-tile:hover { opacity: 0.9; }
 
-        .car-tile:hover {
-            transform: translateY(-3px);
-            opacity: 0.9;
-        }
+        .tile-aangemeld { background: #0e3a1f; border-color: #107c41; }
+        .tile-bezet { background: #4a1505; border-color: #d83b01; }
+        .tile-pauze { background: #4a3800; border-color: #ffb900; }
+        .tile-afgemeld { background: #252526; border-color: #666; }
 
-        .car-tile h4 {
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-
-        .car-tile p {
-            font-size: 13px;
-        }
-
-        /* Status kleuren voor de tegels */
-        .tile-aangemeld { background: #dff6dd; border-color: #107c41; }
-        .tile-bezet { background: #fde7e9; border-color: #d83b01; }
-        .tile-pauze { background: #fff4ce; border-color: #ffb900; }
-        .tile-afgemeld { background: #f3f2f1; border-color: #8a8886; }
-
-        /* KNIPPEREffect ALLEEN bij een nieuw bericht */
         @keyframes knipperAnim {
-            0% { background-color: #ff0000; border-color: #fff; color: white; }
-            50% { background-color: #fff4ce; border-color: #ffb900; color: #333; }
-            100% { background-color: #ff0000; border-color: #fff; color: white; }
+            0% { background-color: #d83b01; border-color: #fff; }
+            50% { background-color: #2d2d30; border-color: #ffb900; }
+            100% { background-color: #d83b01; border-color: #fff; }
         }
+        .car-tile.knipperen { animation: knipperAnim 0.8s infinite; }
 
-        .car-tile.knipperen {
-            animation: knipperAnim 0.8s infinite;
-        }
-
-        /* POPUP VENSTER (MODAL) */
+        /* Popup Modal */
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            padding: 15px;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10000; padding: 15px;
         }
-
         .modal-box {
-            background: white;
-            color: #333;
-            padding: 20px;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
+            background: #2d2d30; border: 1px solid #3f3f46; padding: 20px;
+            border-radius: 8px; width: 100%; max-width: 480px; max-height: 90vh;
+            display: flex; flex-direction: column;
         }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .modal-header h3 {
-            color: #0078d7;
-            margin: 0;
-        }
-
-        .close-x-btn {
-            background: #e81123;
-            color: white;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .close-x-btn:hover {
-            background: #a80710;
-        }
-
-        /* Chat historie box */
-        .chat-history {
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 10px;
-            height: 140px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .chat-msg {
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            max-width: 85%;
-        }
-
-        .chat-msg.centrale {
-            background: #d0e1fd;
-            align-self: flex-end;
-            text-align: right;
-        }
-
-        .chat-msg.auto {
-            background: #e2e2e2;
-            align-self: flex-start;
-        }
-
-        /* Status tegels binnen de popup */
-        .status-tiles-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin: 8px 0;
-        }
-
-        .status-tile {
-            padding: 8px;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            text-align: center;
-            font-size: 13px;
-        }
-
-        .status-aangemeld { background: #107c41; }
-        .status-bezet { background: #d83b01; }
-        .status-pauze { background: #ffb900; color: #333; }
-        .status-afgemeld { background: #8a8886; }
-
-        .status-tile:hover {
-            opacity: 0.85;
-        }
-
-        .modal-bottom-btn {
-            background: #444;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .modal-bottom-btn:hover {
-            background: #222;
-        }
-
-        ul { list-style: none; }
-        ul li { background: #f0f4f8; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .close-x-btn { background: #e81123; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -342,11 +323,11 @@
     <!-- INLOGSCHERM -->
     <div id="login-screen" class="login-overlay">
         <div class="login-box">
-            <h2>Vervoer Systeem</h2>
-            <p>Wie ben je?</p>
-            <input type="text" id="deviceNameInput" placeholder="Naam (bijv. Auto 1 of Centrale M10)">
+            <h2>🚕 BCT / Vervoer Systeem</h2>
+            <p>Voer je naam of voertuignummer in:</p>
+            <input type="text" id="deviceNameInput" placeholder="Bijv. Auto 1 of Centrale M10">
             <select id="roleInput">
-                <option value="Auto">Auto / Chauffeur (Client)</option>
+                <option value="Auto">Auto / Chauffeur (BCT)</option>
                 <option value="Centrale">Centrale (Lenovo M10)</option>
             </select>
             <button id="btnLogin">Inloggen</button>
@@ -355,58 +336,89 @@
 
     <!-- HOOFDSCHERM -->
     <div id="app-container" style="display: none;">
-        <h2 id="welcomeHeader">Verbonden als: <span id="roleDisplay"></span></h2>
-
-        <!-- VOOR AUTO'S / CHAUFFEURS -->
-        <div id="auto-panel" class="panel" style="display: none;">
-            <h3>🚗 Mijn Status & Acties</h3>
-            <label>Meld je status:</label>
-            <div class="status-tiles-container" style="margin-top: 5px; margin-bottom: 15px;">
-                <button class="status-tile status-aangemeld" onclick="setMyStatus('Aangemeld')">Aangemeld</button>
-                <button class="status-tile status-bezet" onclick="setMyStatus('Bezet')">Bezet</button>
-                <button class="status-tile status-pauze" onclick="setMyStatus('Pauze')">Pauze</button>
-                <button class="status-tile status-afgemeld" onclick="setMyStatus('Afgemeld')">Afgemeld</button>
-            </div>
-
-            <label>Stuur bericht naar Centrale:</label>
-            <input type="text" id="autoStatusInput" placeholder="Typ je bericht...">
-            <button class="action-btn" id="btnSendAutoStatus">Verstuur Bericht</button>
-            
-            <h3 style="margin-top: 15px;">📅 Mijn Ritten voor Vandaag:</h3>
-            <ul id="myRidesList"><li>Geen ritten voor vandaag.</li></ul>
-
-            <h3 style="margin-top: 15px;">📥 Berichten (Privé & Algemeen):</h3>
-            <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
+        
+        <!-- BCT STATUSBALK BOVENIN (Alleen voor auto's) -->
+        <div id="bctHeaderBar" class="bct-header" style="display: none;">
+            <div><strong>Voertuig:</strong> <span id="bctCarName">-</span></div>
+            <div id="bctStatusBadge" class="bct-status-indicator status-aangemeld">Aangemeld</div>
+            <div id="bctClock">00:00</div>
         </div>
 
-        <!-- VOOR DE CENTRALE (LENOVO M10) -->
-        <div id="centrale-panel" class="panel" style="display: none;">
-            <h3>📡 Centrale Tegel-Overzicht (Klik op auto voor chat)</h3>
+        <!-- 1. CHAUFFEUR BCT SCHERMEN -->
+        <div id="driver-app" style="display: none; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            
+            <!-- TAB 1: HOME / RITTEN SCHERM -->
+            <div id="tab-ritten" class="bct-screen active">
+                <div class="bct-card">
+                    <h3>📅 Mijn Ritten Vandaag</h3>
+                    <ul id="myRidesList"><li>Geen ritten gepland voor vandaag.</li></ul>
+                </div>
+                <div class="bct-card">
+                    <h3>🟢 Snelle Status Wijzigen</h3>
+                    <div class="status-grid">
+                        <button class="bct-btn bct-btn-green" onclick="setMyStatus('Aangemeld')">Aangemeld</button>
+                        <button class="bct-btn bct-btn-orange" onclick="setMyStatus('Bezet')">Bezet</button>
+                        <button class="bct-btn bct-btn-yellow" onclick="setMyStatus('Pauze')">Pauze</button>
+                        <button class="bct-btn bct-btn-grey" onclick="setMyStatus('Afgemeld')">Afgemeld</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: COMMUNICATIE / CHAT SCHERM -->
+            <div id="tab-chat" class="bct-screen">
+                <div class="bct-card" style="flex: 1; display: flex; flex-direction: column;">
+                    <h3>💬 Berichten met Centrale</h3>
+                    <div id="driverChatHistory" class="chat-history" style="flex: 1;">
+                        <!-- Berichten -->
+                    </div>
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <input type="text" id="driverChatInput" placeholder="Typ bericht naar centrale..." style="margin-bottom:0;">
+                        <button class="bct-btn bct-btn-blue" onclick="sendDriverMessage()" style="padding: 10px 15px;">Verstuur</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: SYSTEEM / INFO SCHERM -->
+            <div id="tab-info" class="bct-screen">
+                <div class="bct-card">
+                    <h3>ℹ️ Systeem & Info</h3>
+                    <p>Verbinding: <span style="color: #107c41;">🟢 Online (Realtime)</span></p>
+                    <p style="margin-top: 10px;">Laatste synchronisatie met centrale is actief.</p>
+                </div>
+            </div>
+
+            <!-- BCT NAVIGATIE ONDERIN (BCT TABS) -->
+            <div class="bct-nav">
+                <button class="bct-nav-btn active" onclick="switchTab('ritten', this)">📋 Ritten</button>
+                <button class="bct-nav-btn" onclick="switchTab('chat', this)">💬 Berichten</button>
+                <button class="bct-nav-btn" onclick="switchTab('info', this)">⚙️ Systeem</button>
+            </div>
+        </div>
+
+        <!-- 2. CENTRALE SCHERM (Lenovo M10) -->
+        <div id="centrale-panel" class="bct-screen" style="display: none; padding: 20px;">
+            <h3>📡 Centrale Dispatch - Actieve Voertuigen</h3>
             <div id="tilesGrid" class="tiles-grid">
                 <p>Wachten op actieve auto's...</p>
             </div>
 
             <h3 style="margin-top: 25px;">📅 Planning & Ritten Inplannen</h3>
-            <label>Kies Datum:</label>
-            <input type="date" id="planDate">
-            <label>Kies Tijd:</label>
-            <input type="time" id="planTime">
-            <label>Naam / Klant:</label>
-            <input type="text" id="planClient" placeholder="Klantnaam of Omschrijving...">
-            <label>Adres / Bestemming:</label>
-            <input type="text" id="planAddress" placeholder="Ophaaladres / Bestemming...">
-            <label>Toewijzen aan Auto:</label>
-            <select id="planCarSelect">
-                <option value="">-- Kies een auto --</option>
-            </select>
-            <button class="action-btn" onclick="saveNewRide()">Rit Inplannen & Doorsturen</button>
+            <div class="bct-card">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div><label>Datum:</label><input type="date" id="planDate"></div>
+                    <div><label>Tijd:</label><input type="time" id="planTime"></div>
+                </div>
+                <label>Klant / Omschrijving:</label>
+                <input type="text" id="planClient" placeholder="Naam klant...">
+                <label>Adres / Bestemming:</label>
+                <input type="text" id="planAddress" placeholder="Adres...">
+                <label>Toewijzen aan Auto:</label>
+                <select id="planCarSelect"><option value="">-- Kies auto --</option></select>
+                <button class="bct-btn bct-btn-green" onclick="saveNewRide()">Rit Inplannen & Doorsturen</button>
+            </div>
 
-            <h3 style="margin-top: 25px;">📋 Alle Geplande Ritten</h3>
+            <h3 style="margin-top: 20px;">📋 Alle Geplande Ritten</h3>
             <ul id="allPlannedRidesList"><li>Geen ritten ingepland.</li></ul>
-
-            <h3 style="margin-top: 25px;">📢 Algemeen Bericht Sturen naar Iedereen</h3>
-            <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's..."></textarea>
-            <button class="action-btn" id="btnSendBroadcast">Verstuur naar Iedereen</button>
         </div>
     </div>
 
@@ -417,30 +429,25 @@
                 <h3 id="modalCarTitle">Auto Details</h3>
                 <button class="close-x-btn" onclick="closeModal()">×</button>
             </div>
-            
             <p style="font-size: 13px; margin-bottom: 8px;"><strong>Status:</strong> <span id="modalCarStatus">-</span></p>
             
-            <div>
-                <label style="font-size: 12px; font-weight: bold;">Chat Geschiedenis:</label>
-                <div id="modalChatHistory" class="chat-history"></div>
+            <label style="font-size: 12px; font-weight: bold;">Chat Geschiedenis:</label>
+            <div id="modalChatHistory" class="chat-history"></div>
+
+            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                <input type="text" id="modalReplyInput" placeholder="Typ antwoord..." style="margin-bottom:0;">
+                <button class="bct-btn bct-btn-blue" onclick="sendReplyFromModal()" style="padding: 10px;">Stuur</button>
             </div>
 
-            <div style="margin-bottom: 8px;">
-                <input type="text" id="modalReplyInput" placeholder="Typ antwoord naar auto..." style="margin-bottom: 5px;">
-                <button class="action-btn" onclick="sendReplyFromModal()">Verstuur Antwoord</button>
+            <label style="font-size: 12px; font-weight: bold;">Status wijzigen voor deze auto:</label>
+            <div class="status-grid" style="margin-bottom: 10px;">
+                <button class="bct-btn bct-btn-green" style="padding:8px;" onclick="setCarStatusFromModal('Aangemeld')">Aangemeld</button>
+                <button class="bct-btn bct-btn-orange" style="padding:8px;" onclick="setCarStatusFromModal('Bezet')">Bezet</button>
+                <button class="bct-btn bct-btn-yellow" style="padding:8px;" onclick="setCarStatusFromModal('Pauze')">Pauze</button>
+                <button class="bct-btn bct-btn-grey" style="padding:8px;" onclick="setCarStatusFromModal('Afgemeld')">Afgemeld</button>
             </div>
 
-            <div>
-                <label style="font-size: 12px; font-weight: bold;">Stel status in voor deze auto:</label>
-                <div class="status-tiles-container">
-                    <button class="status-tile status-aangemeld" onclick="setCarStatusFromModal('Aangemeld')">Aangemeld</button>
-                    <button class="status-tile status-bezet" onclick="setCarStatusFromModal('Bezet')">Bezet</button>
-                    <button class="status-tile status-pauze" onclick="setCarStatusFromModal('Pauze')">Pauze</button>
-                    <button class="status-tile status-afgemeld" onclick="setCarStatusFromModal('Afgemeld')">Afgemeld</button>
-                </div>
-            </div>
-
-            <button class="modal-bottom-btn" onclick="closeModal()">Popup Sluiten</button>
+            <button class="bct-btn bct-btn-grey" onclick="closeModal()">Popup Sluiten</button>
         </div>
     </div>
 
@@ -466,8 +473,6 @@
         let myName = "";
         let myRole = "";
         let selectedCarForModal = "";
-
-        // Huidige datum formatteren als YYYY-MM-DD voor de standaard waarde
         const todayStr = new Date().toISOString().split('T')[0];
 
         const loginScreen = document.getElementById('login-screen');
@@ -475,120 +480,119 @@
         const roleInput = document.getElementById('roleInput');
         const btnLogin = document.getElementById('btnLogin');
         const appContainer = document.getElementById('app-container');
-        const roleDisplay = document.getElementById('roleDisplay');
-        const autoPanel = document.getElementById('auto-panel');
         const centralePanel = document.getElementById('centrale-panel');
+        const driverApp = document.getElementById('driver-app');
+        const bctHeaderBar = document.getElementById('bctHeaderBar');
 
         btnLogin.addEventListener('click', () => {
             myName = deviceNameInput.value.trim();
             myRole = roleInput.value;
 
-            if (myName === "") {
-                alert("Vul een naam in.");
-                return;
-            }
+            if (myName === "") { alert("Vul een naam in."); return; }
 
             loginScreen.style.display = 'none';
             appContainer.style.display = 'flex';
-            roleDisplay.innerText = `${myName} (${myRole})`;
 
             if (myRole === 'Centrale') {
-                centralePanel.style.display = 'block';
-                document.getElementById('planDate').value = todayStr; // Standaard vandaag
+                centralePanel.style.display = 'flex';
+                document.getElementById('planDate').value = todayStr;
                 initCentrale();
             } else {
-                autoPanel.style.display = 'block';
-                initAuto();
+                driverApp.style.display = 'flex';
+                bctHeaderBar.style.display = 'flex';
+                document.getElementById('bctCarName').innerText = myName;
+                initDriver();
             }
         });
 
-        // --- FUNCTIES VOOR AUTO ---
+        // Klok in BCT header
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('bctClock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }, 1000);
+
+        // BCT Tabwisseling
+        window.switchTab = function(tabName, btnElement) {
+            document.querySelectorAll('.bct-screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.bct-nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabName).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // --- CHAUFFEUR (BCT) LOGICA ---
         window.setMyStatus = function(statusText) {
             db.ref('cars/' + myName).update({
                 name: myName,
                 status: statusText,
                 lastUpdate: new Date().toLocaleTimeString()
             });
+
+            // Badge bijwerken in BCT header
+            const badge = document.getElementById('bctStatusBadge');
+            badge.innerText = statusText;
+            badge.className = "bct-status-indicator status-" + statusText.toLowerCase();
+
             stuurChatBericht("Status gewijzigd naar: " + statusText, "auto", false);
         }
 
-        function initAuto() {
-            const statusInput = document.getElementById('autoStatusInput');
-            const btnSend = document.getElementById('btnSendAutoStatus');
-            const messagesForMe = document.getElementById('messagesForMe');
-            const myRidesList = document.getElementById('myRidesList');
-
-            // Aanmelden bij start
+        function initDriver() {
             db.ref('cars/' + myName).update({
                 name: myName,
                 status: "Aangemeld",
                 lastUpdate: new Date().toLocaleTimeString()
             });
 
-            btnSend.addEventListener('click', () => {
-                const msg = statusInput.value.trim();
-                if (!msg) return;
-                stuurChatBericht(msg, "auto", true);
-                statusInput.value = "";
-            });
-
-            // Luisteren naar chatberichten
+            // Luisteren naar chatgeschiedenis
             db.ref('chats/' + myName).on('value', (snapshot) => {
                 const chats = snapshot.val();
+                const historyBox = document.getElementById('driverChatHistory');
                 let html = "";
                 if (chats) {
                     Object.keys(chats).forEach(key => {
                         const c = chats[key];
-                        let stijl = c.sender === 'centrale' ? 'background: #fff3cd; border-left: 4px solid #ffc107;' : 'background: #f0f4f8;';
-                        html += `<li style="${stijl}"><strong>${c.senderName} (${c.time}):</strong> ${c.text}</li>`;
+                        let msgClass = c.sender === 'centrale' ? 'centrale' : 'auto';
+                        html += `<div class="chat-msg ${msgClass}"><strong>${c.senderName} (${c.time}):</strong><br>${c.text}</div>`;
                     });
                 } else {
-                    html = "<li>Nog geen berichten.</li>";
+                    html = "<p style='color:#777; text-align:center;'>Nog geen berichten.</p>";
                 }
-                messagesForMe.innerHTML = html;
+                historyBox.innerHTML = html;
+                historyBox.scrollTop = historyBox.scrollHeight;
             });
 
-            // Luisteren naar geplande ritten (FILTER OP VANDAAGSE DATUM)
+            // Luisteren naar ritten voor vandaag
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
+                const myRidesList = document.getElementById('myRidesList');
                 let html = "";
                 let count = 0;
 
                 if (rides) {
                     Object.keys(rides).forEach(key => {
                         const r = rides[key];
-                        // Controleer of de rit voor deze auto is EN of de datum exact vandaag is
                         if (r.assignedCar === myName && r.date === todayStr) {
                             count++;
-                            html += `<li style="background: #e2f0d9; border-left: 4px solid #385723; margin-bottom: 6px; padding: 8px;">
-                                <strong>⏰ ${r.time}</strong> - ${r.client}<br>
-                                <small>📍 Adres: ${r.address}</small>
-                            </li>`;
+                            html += `<li><strong>⏰ ${r.time}</strong> - ${r.client}<br><small>📍 ${r.address}</small></li>`;
                         }
                     });
                 }
-
-                if (count === 0) {
-                    html = "<li>Geen ritten gepland voor vandaag.</li>";
-                }
+                if (count === 0) html = "<li>Geen ritten gepland voor vandaag.</li>";
                 myRidesList.innerHTML = html;
-            });
-
-            // Luisteren naar algemene broadcast berichten
-            db.ref('broadcast').on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const li = document.createElement('li');
-                    li.style.background = '#e1ecf4';
-                    li.innerHTML = `<strong>📢 Centrale Broadcast (${data.time}):</strong> ${data.text}`;
-                    messagesForMe.prepend(li);
-                }
             });
         }
 
+        window.sendDriverMessage = function() {
+            const input = document.getElementById('driverChatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            stuurChatBericht(msg, "auto", true);
+            input.value = "";
+        }
+
         function stuurChatBericht(tekst, senderType, triggerKnipperen) {
-            const newMsgRef = db.ref('chats/' + myName).push();
-            newMsgRef.set({
+            db.ref('chats/' + myName).push().set({
                 sender: senderType,
                 senderName: myName,
                 text: tekst,
@@ -597,91 +601,57 @@
 
             let updateData = { lastUpdate: new Date().toLocaleTimeString() };
             if (triggerKnipperen) updateData.hasUnreadMessage = true;
-
             db.ref('cars/' + myName).update(updateData);
         }
 
-        // --- FUNCTIES VOOR CENTRALE ---
+        // --- CENTRALE LOGICA ---
         function initCentrale() {
             const tilesGrid = document.getElementById('tilesGrid');
             const planCarSelect = document.getElementById('planCarSelect');
             const allPlannedRidesList = document.getElementById('allPlannedRidesList');
-            const broadcastInput = document.getElementById('broadcastInput');
-            const btnSendBroadcast = document.getElementById('btnSendBroadcast');
 
-            // Luisteren naar actieve auto's voor tegels én keuzemenu in planning
             db.ref('cars').on('value', (snapshot) => {
                 const cars = snapshot.val();
                 tilesGrid.innerHTML = "";
-                planCarSelect.innerHTML = '<option value="">-- Kies een auto --</option>';
+                planCarSelect.innerHTML = '<option value="">-- Kies auto --</option>';
 
                 if (cars) {
                     Object.keys(cars).forEach(key => {
                         const car = cars[key];
-                        
-                        // Dropdown vullen
                         const opt = document.createElement('option');
-                        opt.value = car.name;
-                        opt.innerText = car.name;
+                        opt.value = car.name; opt.innerText = car.name;
                         planCarSelect.appendChild(opt);
 
-                        // Tegels renderen
                         const tile = document.createElement('div');
                         let statusClass = "tile-afgemeld";
                         if (car.status === "Aangemeld") statusClass = "tile-aangemeld";
                         else if (car.status === "Bezet") statusClass = "tile-bezet";
                         else if (car.status === "Pauze") statusClass = "tile-pauze";
-                        else if (car.status === "Afgemeld") statusClass = "tile-afgemeld";
 
                         let knipperClass = car.hasUnreadMessage ? "knipperen" : "";
                         tile.className = `car-tile ${statusClass} ${knipperClass}`;
-
-                        tile.innerHTML = `
-                            <h4>${car.name}</h4>
-                            <p><strong>Status:</strong> ${car.status || 'Onbekend'}</p>
-                            <p style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Update: ${car.lastUpdate || '-'}</p>
-                        `;
-
+                        tile.innerHTML = `<h4>${car.name}</h4><p>Status: ${car.status || 'Onbekend'}</p>`;
                         tile.addEventListener('click', () => openModal(car));
                         tilesGrid.appendChild(tile);
                     });
                 } else {
-                    tilesGrid.innerHTML = "<p>Geen actieve auto's gevonden.</p>";
+                    tilesGrid.innerHTML = "<p>Geen actieve auto's.</p>";
                 }
             });
 
-            // Alle geplande ritten tonen bij de centrale
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 let html = "";
                 if (rides) {
                     Object.keys(rides).forEach(key => {
                         const r = rides[key];
-                        html += `<li>
-                            <strong>[${r.date} om ${r.time}]</strong> Auto: <em>${r.assignedCar}</em><br>
-                            Klant: <strong>${r.client}</strong> | Adres: ${r.address}
-                        </li>`;
+                        html += `<li><strong>[${r.date} - ${r.time}]</strong> Auto: <em>${r.assignedCar}</em> | Klant: <strong>${r.client}</strong> (${r.address})</li>`;
                     });
-                } else {
-                    html = "<li>Geen ritten ingepland.</li>";
-                }
+                } else { html = "<li>Geen ritten ingepland.</li>"; }
                 allPlannedRidesList.innerHTML = html;
-            });
-
-            btnSendBroadcast.addEventListener('click', () => {
-                const text = broadcastInput.value.trim();
-                if (!text) return;
-
-                db.ref('broadcast').set({
-                    text: text,
-                    time: new Date().toLocaleTimeString()
-                });
-                broadcastInput.value = "";
-                alert("Broadcast verzonden naar iedereen!");
             });
         }
 
-        // Nieuwe rit inplannen vanuit de centrale
         window.saveNewRide = function() {
             const date = document.getElementById('planDate').value;
             const time = document.getElementById('planTime').value;
@@ -689,34 +659,14 @@
             const address = document.getElementById('planAddress').value.trim();
             const car = document.getElementById('planCarSelect').value;
 
-            if (!date || !time || !client || !address || !car) {
-                alert("Vul alle velden van de planning in!");
-                return;
-            }
+            if (!date || !time || !client || !address || !car) { alert("Vul alle velden in!"); return; }
 
-            // Opslaan in Firebase onder 'rides'
-            const newRideRef = db.ref('rides').push();
-            newRideRef.set({
-                date: date,
-                time: time,
-                client: client,
-                address: address,
-                assignedCar: car,
-                createdTime: new Date().toLocaleTimeString()
-            });
-
-            // Velden leegmaken
+            db.ref('rides').push().set({ date, time, client, address, assignedCar: car, createdTime: new Date().toLocaleTimeString() });
             document.getElementById('planClient').value = "";
             document.getElementById('planAddress').value = "";
-            
-            let melding = `Rit succesvol ingepland voor ${car} op ${date} om ${time}!`;
-            if (date !== todayStr) {
-                melding += `\n(Let op: Deze rit verschijnt pas op het scherm van ${car} op ${date}).`;
-            }
-            alert(melding);
+            alert(`Rit ingepland voor ${car} op ${date} om ${time}!`);
         }
 
-        // Open popup en laad de chatgeschiedenis
         function openModal(car) {
             selectedCarForModal = car.name;
             document.getElementById('modalCarTitle').innerText = "Chat met: " + car.name;
@@ -730,16 +680,13 @@
                 const chats = snapshot.val();
                 const historyBox = document.getElementById('modalChatHistory');
                 let html = "";
-
                 if (chats) {
                     Object.keys(chats).forEach(key => {
                         const c = chats[key];
                         let msgClass = c.sender === 'centrale' ? 'centrale' : 'auto';
                         html += `<div class="chat-msg ${msgClass}"><strong>${c.senderName} (${c.time}):</strong><br>${c.text}</div>`;
                     });
-                } else {
-                    html = "<p style='color:#777; text-align:center;'>Nog geen berichten gewisseld.</p>";
-                }
+                } else { html = "<p style='color:#777; text-align:center;'>Geen berichten.</p>"; }
                 historyBox.innerHTML = html;
                 historyBox.scrollTop = historyBox.scrollHeight;
             });
@@ -747,48 +694,30 @@
 
         window.closeModal = function() {
             document.getElementById('centralModal').style.display = 'none';
-            if (selectedCarForModal) {
-                db.ref('chats/' + selectedCarForModal).off();
-            }
+            if (selectedCarForModal) db.ref('chats/' + selectedCarForModal).off();
         }
 
         window.sendReplyFromModal = function() {
             const text = document.getElementById('modalReplyInput').value.trim();
             if (!text || !selectedCarForModal) return;
 
-            const newMsgRef = db.ref('chats/' + selectedCarForModal).push();
-            newMsgRef.set({
-                sender: 'centrale',
-                senderName: 'Centrale',
-                text: text,
-                time: new Date().toLocaleTimeString()
+            db.ref('chats/' + selectedCarForModal).push().set({
+                sender: 'centrale', senderName: 'Centrale', text: text, time: new Date().toLocaleTimeString()
             });
-
             document.getElementById('modalReplyInput').value = "";
         }
 
         window.setCarStatusFromModal = function(newStatus) {
             if (!selectedCarForModal) return;
-
-            db.ref('cars/' + selectedCarForModal).update({
-                status: newStatus,
-                lastUpdate: new Date().toLocaleTimeString()
-            });
+            db.ref('cars/' + selectedCarForModal).update({ status: newStatus, lastUpdate: new Date().toLocaleTimeString() });
             document.getElementById('modalCarStatus').innerText = newStatus;
         }
 
-        // Inline Service Worker voor PWA
+        // PWA Service Worker
         if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', (e) => self.skipWaiting());
-                self.addEventListener('activate', (e) => self.clients.claim());
-                self.addEventListener('fetch', (e) => {
-                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-                });
-            `;
+            const swCode = `self.addEventListener('fetch', (e) => {});`;
             const blob = new Blob([swCode], { type: 'text/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Fout:', err));
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => {});
         }
     </script>
 </body>
