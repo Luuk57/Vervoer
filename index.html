@@ -207,11 +207,11 @@
         }
 
         .bct-btn {
-            padding: 12px;
+            padding: 10px 14px;
             border: none;
             border-radius: 4px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
             text-align: center;
             color: white;
@@ -221,6 +221,7 @@
         .bct-btn-yellow { background: #ffb900; color: #000; }
         .bct-btn-grey { background: #666; }
         .bct-btn-blue { background: #0078d7; }
+        .bct-btn-red { background: #e81123; }
 
         .bct-btn:active { opacity: 0.8; }
 
@@ -240,11 +241,23 @@
         ul { list-style: none; }
         ul li {
             background: #252526;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 8px;
             border-radius: 4px;
             border-left: 4px solid #0078d7;
             font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ride-info {
+            flex: 1;
+        }
+
+        .ride-actions {
+            display: flex;
+            gap: 6px;
         }
 
         .chat-history {
@@ -388,11 +401,39 @@
             </div>
         </div>
 
-        <!-- 2. CENTRALE SCHERM (Lenovo M10) MET ONDERSTE NAVIGATIEKNOPPEN -->
+        <!-- 2. CENTRALE SCHERM (Lenovo M10) -->
         <div id="centrale-app" style="display: none; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
             
-            <!-- TAB 1: COMMUNICATIE (Tegels & Overzicht) -->
-            <div id="centrale-tab-comm" class="bct-screen active">
+            <!-- TAB 1: PLANNING & RITTEN (STANDAARD STARTKERM VOOR CENTRALE) -->
+            <div id="centrale-tab-plan" class="bct-screen active">
+                <div class="bct-card">
+                    <h3 id="formTitle">📅 Nieuwe Rit Inplannen</h3>
+                    <input type="hidden" id="editRideId" value="">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div><label>Datum:</label><input type="date" id="planDate"></div>
+                        <div><label>Tijd:</label><input type="time" id="planTime"></div>
+                    </div>
+                    <label>Klant / Omschrijving:</label>
+                    <input type="text" id="planClient" placeholder="Naam klant...">
+                    <label>Adres / Bestemming:</label>
+                    <input type="text" id="planAddress" placeholder="Adres...">
+                    <label>Toewijzen aan Auto:</label>
+                    <select id="planCarSelect"><option value="">-- Kies auto --</option></select>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button class="bct-btn bct-btn-green" style="flex:1;" onclick="saveNewRide()" id="saveRideBtn">Rit Opslaan</button>
+                        <button class="bct-btn bct-btn-grey" style="display:none; flex:1;" id="cancelEditBtn" onclick="cancelEdit()">Annuleren</button>
+                    </div>
+                </div>
+
+                <div class="bct-card">
+                    <h3>📋 Alle Geplande Ritten (Beheer)</h3>
+                    <ul id="allPlannedRidesList"><li>Geen ritten ingepland.</li></ul>
+                </div>
+            </div>
+
+            <!-- TAB 2: COMMUNICATIE (Tegels & Overzicht) -->
+            <div id="centrale-tab-comm" class="bct-screen">
                 <div class="bct-card">
                     <h3>📡 Centrale Dispatch - Actieve Voertuigen</h3>
                     <div id="tilesGrid" class="tiles-grid">
@@ -407,33 +448,10 @@
                 </div>
             </div>
 
-            <!-- TAB 2: PLANNING & RITTEN -->
-            <div id="centrale-tab-plan" class="bct-screen">
-                <div class="bct-card">
-                    <h3>📅 Planning & Ritten Inplannen</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div><label>Datum:</label><input type="date" id="planDate"></div>
-                        <div><label>Tijd:</label><input type="time" id="planTime"></div>
-                    </div>
-                    <label>Klant / Omschrijving:</label>
-                    <input type="text" id="planClient" placeholder="Naam klant...">
-                    <label>Adres / Bestemming:</label>
-                    <input type="text" id="planAddress" placeholder="Adres...">
-                    <label>Toewijzen aan Auto:</label>
-                    <select id="planCarSelect"><option value="">-- Kies auto --</option></select>
-                    <button class="bct-btn bct-btn-green" onclick="saveNewRide()">Rit Inplannen & Doorsturen</button>
-                </div>
-
-                <div class="bct-card">
-                    <h3>📋 Alle Geplande Ritten (Overzicht)</h3>
-                    <ul id="allPlannedRidesList"><li>Geen ritten ingepland.</li></ul>
-                </div>
-            </div>
-
             <!-- CENTRALE NAVIGATIEBALK ONDERIN -->
             <div class="bct-nav">
-                <button class="bct-nav-btn active" onclick="switchCentraleTab('comm', this)">📡 Communicatie</button>
-                <button class="bct-nav-btn" onclick="switchCentraleTab('plan', this)">📅 Planning & Ritten</button>
+                <button class="bct-nav-btn active" onclick="switchCentraleTab('plan', this)">📅 Planning & Ritten</button>
+                <button class="bct-nav-btn" onclick="switchCentraleTab('comm', this)">📡 Communicatie</button>
             </div>
         </div>
     </div>
@@ -661,13 +679,24 @@
                 }
             });
 
+            // Geplande ritten ophalen met Bewerken & Verwijderen knoppen
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 let html = "";
                 if (rides) {
                     Object.keys(rides).forEach(key => {
                         const r = rides[key];
-                        html += `<li><strong>[${r.date} - ${r.time}]</strong> Auto: <em>${r.assignedCar}</em><br>Klant: <strong>${r.client}</strong> | Adres: ${r.address}</li>`;
+                        html += `
+                            <li>
+                                <div class="ride-info">
+                                    <strong>[${r.date} - ${r.time}]</strong> Auto: <em>${r.assignedCar}</em><br>
+                                    Klant: <strong>${r.client}</strong> | Adres: ${r.address}
+                                </div>
+                                <div class="ride-actions">
+                                    <button class="bct-btn bct-btn-blue" onclick="editRide('${key}', '${r.date}', '${r.time}', '${r.client}', '${r.address}', '${r.assignedCar}')">Bewerk</button>
+                                    <button class="bct-btn bct-btn-red" onclick="deleteRide('${key}')">Delete</button>
+                                </div>
+                            </li>`;
                     });
                 } else { 
                     html = "<li>Geen ritten ingepland.</li>"; 
@@ -677,6 +706,7 @@
         }
 
         window.saveNewRide = function() {
+            const editId = document.getElementById('editRideId').value;
             const date = document.getElementById('planDate').value;
             const time = document.getElementById('planTime').value;
             const client = document.getElementById('planClient').value.trim();
@@ -685,10 +715,56 @@
 
             if (!date || !time || !client || !address || !car) { alert("Vul alle velden in!"); return; }
 
-            db.ref('rides').push().set({ date, time, client, address, assignedCar: car, createdTime: new Date().toLocaleTimeString() });
+            const rideData = { date, time, client, address, assignedCar: car, createdTime: new Date().toLocaleTimeString() };
+
+            if (editId) {
+                // Bestaande rit updaten
+                db.ref('rides/' + editId).update(rideData);
+                alert("Rit succesvol bijgewerkt!");
+                cancelEdit();
+            } else {
+                // Nieuwe rit aanmaken
+                db.ref('rides').push().set(rideData);
+                alert(`Rit ingepland voor ${car} op ${date} om ${time}!`);
+                document.getElementById('planClient').value = "";
+                document.getElementById('planAddress').value = "";
+            }
+        }
+
+        window.editRide = function(id, date, time, client, address, car) {
+            document.getElementById('editRideId').value = id;
+            document.getElementById('planDate').value = date;
+            document.getElementById('planTime').value = time;
+            document.getElementById('planClient').value = client;
+            document.getElementById('planAddress').value = address;
+            document.getElementById('planCarSelect').value = car;
+
+            document.getElementById('formTitle').innerText = "✏️ Rit Bewerken";
+            document.getElementById('saveRideBtn').innerText = "Wijzigingen Opslaan";
+            document.getElementById('cancelEditBtn').style.display = 'block';
+            
+            // Scroll naar boven naar hetformulier
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.cancelEdit = function() {
+            document.getElementById('editRideId').value = "";
+            document.getElementById('planDate').value = todayStr;
+            document.getElementById('planTime').value = "";
             document.getElementById('planClient').value = "";
             document.getElementById('planAddress').value = "";
-            alert(`Rit ingepland voor ${car} op ${date} om ${time}!`);
+            document.getElementById('planCarSelect').value = "";
+
+            document.getElementById('formTitle').innerText = "📅 Nieuwe Rit Inplannen";
+            document.getElementById('saveRideBtn').innerText = "Rit Opslaan";
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+
+        window.deleteRide = function(id) {
+            if (confirm("Weet je zeker dat je deze rit wilt verwijderen?")) {
+                db.ref('rides/' + id).remove();
+                alert("Rit verwijderd.");
+            }
         }
 
         window.sendBroadcastMessage = function() {
