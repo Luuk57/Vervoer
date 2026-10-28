@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vervoer Communicatie Systeem</title>
+    <title>Vervoer Centrale Dashboard</title>
 
     <!-- Inline Web App Manifest (PWA) -->
     <link rel="manifest" href='data:application/manifest+json,{
-        "name": "Vervoer Communicatie",
-        "short_name": "VervoerCom",
+        "name": "Vervoer Dashboard",
+        "short_name": "VervoerDB",
         "start_url": "./index.html",
         "display": "standalone",
         "background_color": "#0078d7",
@@ -37,7 +37,7 @@
             flex-direction: column;
         }
 
-        /* Perfect gecentreerd inlogscherm */
+        /* Gecentreerd inlogscherm */
         .login-overlay {
             position: fixed;
             top: 0;
@@ -146,46 +146,123 @@
             background: #0b5a30;
         }
 
-        ul {
-            list-style: none;
-            max-height: 200px;
-            overflow-y: auto;
+        /* TEGELS GRID VOOR DE CENTRALE */
+        .tiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
         }
 
-        ul li {
+        .car-tile {
             background: #f0f4f8;
-            padding: 10px;
-            margin-bottom: 6px;
-            border-radius: 4px;
-            border-left: 4px solid #0078d7;
+            border: 2px solid #0078d7;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .car-tile:hover {
+            transform: translateY(-3px);
+            background: #e1ecf4;
+        }
+
+        .car-tile h4 {
+            font-size: 18px;
+            color: #0078d7;
+            margin-bottom: 5px;
+        }
+
+        .car-tile p {
             font-size: 13px;
+            color: #555;
+        }
+
+        /* KNIPPEREffect voor tegels met een nieuw bericht */
+        @keyframes knipperAnim {
+            0% { background-color: #ffcccc; border-color: #ff0000; }
+            50% { background-color: #fff; border-color: #0078d7; }
+            100% { background-color: #ffcccc; border-color: #ff0000; }
+        }
+
+        .car-tile.knipperen {
+            animation: knipperAnim 1s infinite;
+        }
+
+        /* POPUP VENSTER (MODAL) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vw;
+            background: rgba(0, 0, 0, 0.7);
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            z-index: 10000;
+            padding: 15px;
         }
 
-        .car-info {
-            flex: 1;
+        .modal-box {
+            background: white;
+            color: #333;
+            padding: 25px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
-        .private-btn {
-            background: #0078d7;
+        .modal-box h3 {
+            color: #0078d7;
+            margin-bottom: 10px;
+        }
+
+        /* Status tegels binnen de popup */
+        .status-tiles-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .status-tile {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .status-aangemeld { background: #107c41; }
+        .status-bezet { background: #d83b01; }
+        .status-pauze { background: #ffb900; color: #333; }
+        .status-afgemeld { background: #a4262c; }
+
+        .status-tile:hover {
+            opacity: 0.85;
+        }
+
+        .modal-close-btn {
+            background: #666;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            margin-top: 10px;
+            width: 100%;
         }
 
-        .private-btn:hover {
-            background: #005a9e;
-        }
-
-        .private-msg-box {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-        }
+        ul { list-style: none; }
+        ul li { background: #f0f4f8; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -210,24 +287,65 @@
 
         <!-- VOOR AUTO'S / CHAUFFEURS -->
         <div id="auto-panel" class="panel" style="display: none;">
-            <h3>🚗 Mijn Status</h3>
-            <label>Status update:</label>
-            <input type="text" id="autoStatusInput" placeholder="Bijv. Onderweg naar bestemming...">
-            <button class="action-btn" id="btnSendAutoStatus">Update Status</button>
+            <h3>🚗 Mijn Status & Acties</h3>
+            <label>Meld je status:</label>
+            <div class="status-tiles-container" style="margin-top: 5px; margin-bottom: 15px;">
+                <button class="status-tile status-aangemeld" onclick="setMyStatus('Aangemeld')">Aangemeld</button>
+                <button class="status-tile status-bezet" onclick="setMyStatus('Bezet')">Bezet</button>
+                <button class="status-tile status-pauze" onclick="setMyStatus('Pauze')">Pauze</button>
+                <button class="status-tile status-afgemeld" onclick="setMyStatus('Afgemeld')">Afgemeld</button>
+            </div>
+
+            <label>Of typ een eigen status/bericht naar centrale:</label>
+            <input type="text" id="autoStatusInput" placeholder="Bijv. Onderweg naar klant...">
+            <button class="action-btn" id="btnSendAutoStatus">Stuur naar Centrale</button>
             
-            <h3 style="margin-top: 15px;">📥 Berichten (Algemeen & Privé):</h3>
-            <ul id="messagesForMe" style="display: block;"><li>Nog geen berichten.</li></ul>
+            <h3 style="margin-top: 15px;">📥 Berichten van Centrale:</h3>
+            <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
         </div>
 
         <!-- VOOR DE CENTRALE (LENOVO M10) -->
         <div id="centrale-panel" class="panel" style="display: none;">
-            <h3>📡 Centrale Overzicht: Actieve Apparaten</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">Klik op 'Privébericht' bij een auto om direct te appen.</p>
-            <ul id="allUsersList"><li>Wachten op actieve apparaten...</li></ul>
+            <h3>📡 Centrale Tegel-Overzicht (Klik op een auto voor details & berichten)</h3>
+            <div id="tilesGrid" class="tiles-grid">
+                <!-- Hier komen de tegels per auto -->
+                <p>Wachten op actieve auto's...</p>
+            </div>
 
-            <h3 style="margin-top: 20px;">📢 Algemeen Bericht Sturen naar Iedereen</h3>
-            <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's en centrales..."></textarea>
+            <h3 style="margin-top: 25px;">📢 Algemeen Bericht Sturen naar Iedereen</h3>
+            <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's..."></textarea>
             <button class="action-btn" id="btnSendBroadcast">Verstuur naar Iedereen</button>
+        </div>
+    </div>
+
+    <!-- POPUP VOOR DE CENTRALE (WANNEER JE OP EEN TEGEL KLIKT) -->
+    <div id="centralModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h3 id="modalCarTitle">Auto Details</h3>
+            <p><strong>Huidige Status:</strong> <span id="modalCarStatus">-</span></p>
+            
+            <div style="margin-top: 15px;">
+                <label><strong>Laatste Bericht van Auto:</strong></label>
+                <p id="modalCarMessage" style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-top: 5px; font-style: italic;">Geen bericht.</p>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <label><strong>Stuur privébericht / antwoord naar deze auto:</strong></label>
+                <input type="text" id="modalReplyInput" placeholder="Typ antwoord...">
+                <button class="action-btn" onclick="sendReplyFromModal()">Verstuur Antwoord</button>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <label><strong>Stel status in voor deze auto:</strong></label>
+                <div class="status-tiles-container">
+                    <button class="status-tile status-aangemeld" onclick="setCarStatusFromModal('Aangemeld')">Aangemeld</button>
+                    <button class="status-tile status-bezet" onclick="setCarStatusFromModal('Bezet')">Bezet</button>
+                    <button class="status-tile status-pauze" onclick="setCarStatusFromModal('Pauze')">Pauze</button>
+                    <button class="status-tile status-afgemeld" onclick="setCarStatusFromModal('Afgemeld')">Afgemeld</button>
+                </div>
+            </div>
+
+            <button class="modal-close-btn" onclick="closeModal()">Sluiten</button>
         </div>
     </div>
 
@@ -252,6 +370,7 @@
 
         let myName = "";
         let myRole = "";
+        let selectedCarForModal = "";
 
         const loginScreen = document.getElementById('login-screen');
         const deviceNameInput = document.getElementById('deviceNameInput');
@@ -275,8 +394,6 @@
             appContainer.style.display = 'flex';
             roleDisplay.innerText = `${myName} (${myRole})`;
 
-            registerInFirebase("Online");
-
             if (myRole === 'Centrale') {
                 centralePanel.style.display = 'block';
                 initCentrale();
@@ -286,46 +403,56 @@
             }
         });
 
-        function registerInFirebase(statusText) {
-            db.ref('users/' + myName).set({
-                name: myName,
-                role: myRole,
-                status: statusText,
-                lastUpdate: new Date().toLocaleTimeString()
-            });
+        // --- FUNCTIES VOOR AUTO ---
+        window.setMyStatus = function(statusText) {
+            updateCarDataInFirebase(statusText, "Status gewijzigd naar " + statusText);
+            alert("Status ingesteld op: " + statusText);
         }
 
-        // --- FUNCTIES VOOR AUTO ---
         function initAuto() {
             const statusInput = document.getElementById('autoStatusInput');
             const btnSend = document.getElementById('btnSendAutoStatus');
             const messagesForMe = document.getElementById('messagesForMe');
 
+            // Standaard aanmelden bij start
+            updateCarDataInFirebase("Aangemeld", "Ingeklokt");
+
             btnSend.addEventListener('click', () => {
-                registerInFirebase(statusInput.value || "Online");
-                alert("Status bijgewerkt!");
+                const msg = statusInput.value.trim();
+                if (!msg) return;
+                updateCarDataInFirebase("Bezet", msg);
+                statusInput.value = "";
+                alert("Bericht verzonden naar centrale!");
             });
 
-            // Opslag voor inkomende berichten
+            // Berichten van centrale ontvangen (zowel broadcast als privé)
             let laatsteBroadcast = "";
             let laatstePrive = "";
 
-            // Luisteren naar algemene berichten
             db.ref('broadcast').on('value', (snapshot) => {
-                const msg = snapshot.val();
-                if (msg) {
-                    laatsteBroadcast = `<li><strong>📢 Centrale (${msg.time}):</strong> ${msg.text}</li>`;
+                const data = snapshot.val();
+                if (data) {
+                    laatsteBroadcast = `<li><strong>📢 Centrale (${data.time}):</strong> ${data.text}</li>`;
                     updateBerichtenLijst(messagesForMe, laatsteBroadcast, laatstePrive);
                 }
             });
 
-            // Luisteren naar SPECIFIEKE privéberichten voor deze auto
-            db.ref('privateMessages/' + myName).on('value', (snapshot) => {
-                const msg = snapshot.val();
-                if (msg) {
-                    laatstePrive = `<li class="private-msg-box"><div class="car-info"><strong>🔒 Privé van Centrale (${msg.time}):</strong> ${msg.text}</div></li>`;
+            db.ref('cars/' + myName + '/privateMessage').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    laatstePrive = `<li style="background: #fff3cd; border-left: 4px solid #ffc107;"><strong>🔒 Privé van Centrale (${data.time}):</strong> ${data.text}</li>`;
                     updateBerichtenLijst(messagesForMe, laatsteBroadcast, laatstePrive);
                 }
+            });
+        }
+
+        function updateCarDataInFirebase(status, message) {
+            db.ref('cars/' + myName).update({
+                name: myName,
+                status: status,
+                lastMessage: message,
+                hasUnreadMessage: true, // Markeer als ongelezen zodat centrale gaat knipperen
+                lastUpdate: new Date().toLocaleTimeString()
             });
         }
 
@@ -339,41 +466,42 @@
 
         // --- FUNCTIES VOOR CENTRALE ---
         function initCentrale() {
-            const allUsersList = document.getElementById('allUsersList');
+            const tilesGrid = document.getElementById('tilesGrid');
             const broadcastInput = document.getElementById('broadcastInput');
             const btnSendBroadcast = document.getElementById('btnSendBroadcast');
 
-            // Luisteren naar alle actieve gebruikers
-            db.ref('users').on('value', (snapshot) => {
-                const users = snapshot.val();
-                allUsersList.innerHTML = "";
-                if (users) {
-                    Object.keys(users).forEach(key => {
-                        const user = users[key];
-                        const li = document.createElement('li');
-                        
-                        let actieKnop = "";
-                        // Als het een auto is, tonen we een knop om een privébericht te sturen
-                        if (user.role === 'Auto') {
-                            actieKnop = `<button class="private-btn" onclick="stuurPriveBericht('${user.name}')">Privébericht</button>`;
-                        }
+            // Luisteren naar alle auto's voor het tegel-overzicht
+            db.ref('cars').on('value', (snapshot) => {
+                const cars = snapshot.val();
+                tilesGrid.innerHTML = "";
 
-                        li.innerHTML = `
-                            <div class="car-info">
-                                <strong>[${user.role}] ${user.name}</strong><br>
-                                Status: ${user.status} <br>
-                                <small style="color:gray;">Laatste update: ${user.lastUpdate}</small>
-                            </div>
-                            ${actieKnop}
+                if (cars) {
+                    Object.keys(cars).forEach(key => {
+                        const car = cars[key];
+                        const tile = document.createElement('div');
+                        
+                        // Bepaal of tegel moet knipperen (als er een ongelezen bericht is)
+                        let knipperClass = car.hasUnreadMessage ? "knipperen" : "";
+                        tile.className = `car-tile ${knipperClass}`;
+
+                        tile.innerHTML = `
+                            <h4>${car.name}</h4>
+                            <p><strong>Status:</strong> ${car.status || 'Onbekend'}</p>
+                            <p style="font-size: 11px; color: #777; margin-top: 4px;">Laatste update: ${car.lastUpdate || '-'}</p>
                         `;
-                        allUsersList.appendChild(li);
+
+                        // Als je op de tegel klikt, open je de modal/popup
+                        tile.addEventListener('click', () => {
+                            openModal(car);
+                        });
+
+                        tilesGrid.appendChild(tile);
                     });
                 } else {
-                    allUsersList.innerHTML = "<li>Geen actieve apparaten online.</li>";
+                    tilesGrid.innerHTML = "<p>Geen actieve auto's gevonden.</p>";
                 }
             });
 
-            // Bericht sturen naar iedereen
             btnSendBroadcast.addEventListener('click', () => {
                 const text = broadcastInput.value.trim();
                 if (!text) return;
@@ -387,17 +515,47 @@
             });
         }
 
-        // Functie om een privébericht te sturen naar een specifieke auto
-        window.stuurPriveBericht = function(autoNaam) {
-            const bericht = prompt(`Typ een privébericht voor ${autoNaam}:`);
-            if (!bericht) return;
+        // Open popup voor een specifieke auto
+        function openModal(car) {
+            selectedCarForModal = car.name;
+            document.getElementById('modalCarTitle').innerText = "Auto: " + car.name;
+            document.getElementById('modalCarStatus').innerText = car.status || "Onbekend";
+            document.getElementById('modalCarMessage').innerText = car.lastMessage || "Geen recent bericht.";
+            document.getElementById('modalReplyInput').value = "";
+            document.getElementById('centralModal').style.display = 'flex';
 
-            db.ref('privateMessages/' + autoNaam).set({
-                text: bericht,
+            // Zodra je de tegel opent, zetten we het ongelezen vinkje uit (stopt met knipperen)
+            db.ref('cars/' + car.name).update({ hasUnreadMessage: false });
+        }
+
+        window.closeModal = function() {
+            document.getElementById('centralModal').style.display = 'none';
+        }
+
+        // Antwoord sturen vanuit de modal
+        window.sendReplyFromModal = function() {
+            const text = document.getElementById('modalReplyInput').value.trim();
+            if (!text || !selectedCarForModal) return;
+
+            db.ref('cars/' + selectedCarForModal + '/privateMessage').set({
+                text: text,
                 time: new Date().toLocaleTimeString()
             });
-            alert(`Privébericht verzonden naar ${autoNaam}!`);
-        };
+            document.getElementById('modalReplyInput').value = "";
+            alert("Antwoord verzonden naar " + selectedCarForModal + "!");
+        }
+
+        // Status van auto wijzigen vanuit de modal door de centrale
+        window.setCarStatusFromModal = function(newStatus) {
+            if (!selectedCarForModal) return;
+
+            db.ref('cars/' + selectedCarForModal).update({
+                status: newStatus,
+                lastUpdate: new Date().toLocaleTimeString()
+            });
+            document.getElementById('modalCarStatus').innerText = newStatus;
+            alert(`Status van ${selectedCarForModal} gewijzigd naar ${newStatus}`);
+        }
 
         // Inline Service Worker voor PWA
         if ('serviceWorker' in navigator) {
