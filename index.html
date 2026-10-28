@@ -156,41 +156,45 @@
         }
 
         .car-tile {
-            background: #f0f4f8;
-            border: 2px solid #0078d7;
+            border: 2px solid #ccc;
             border-radius: 8px;
             padding: 15px;
             text-align: center;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: transform 0.2s;
+            color: #333;
         }
 
         .car-tile:hover {
             transform: translateY(-3px);
-            background: #e1ecf4;
+            opacity: 0.9;
         }
 
         .car-tile h4 {
             font-size: 18px;
-            color: #0078d7;
             margin-bottom: 5px;
         }
 
         .car-tile p {
             font-size: 13px;
-            color: #555;
         }
 
-        /* KNIPPEREffect voor tegels met een nieuw bericht */
+        /* Status kleuren voor de tegels */
+        .tile-aangemeld { background: #dff6dd; border-color: #107c41; }
+        .tile-bezet { background: #fde7e9; border-color: #d83b01; }
+        .tile-pauze { background: #fff4ce; border-color: #ffb900; }
+        .tile-afgemeld { background: #f3f2f1; border-color: #8a8886; }
+
+        /* KNIPPEREffect ALLEEN bij een nieuw bericht */
         @keyframes knipperAnim {
-            0% { background-color: #ffcccc; border-color: #ff0000; }
-            50% { background-color: #fff; border-color: #0078d7; }
-            100% { background-color: #ffcccc; border-color: #ff0000; }
+            0% { background-color: #ff0000; border-color: #fff; color: white; }
+            50% { background-color: #fff4ce; border-color: #ffb900; color: #333; }
+            100% { background-color: #ff0000; border-color: #fff; color: white; }
         }
 
         .car-tile.knipperen {
-            animation: knipperAnim 1s infinite;
+            animation: knipperAnim 0.8s infinite;
         }
 
         /* POPUP VENSTER (MODAL) */
@@ -306,7 +310,7 @@
         .status-aangemeld { background: #107c41; }
         .status-bezet { background: #d83b01; }
         .status-pauze { background: #ffb900; color: #333; }
-        .status-afgemeld { background: #a4262c; }
+        .status-afgemeld { background: #8a8886; }
 
         .status-tile:hover {
             opacity: 0.85;
@@ -476,8 +480,13 @@
 
         // --- FUNCTIES VOOR AUTO ---
         window.setMyStatus = function(statusText) {
-            updateCarStatusInFirebase(statusText);
-            stuurChatBericht("Status gewijzigd naar: " + statusText, "auto");
+            // Alleen status updaten, GEEN hasUnreadMessage op true zetten (dus niet knipperen)
+            db.ref('cars/' + myName).update({
+                name: myName,
+                status: statusText,
+                lastUpdate: new Date().toLocaleTimeString()
+            });
+            stuurChatBericht("Status gewijzigd naar: " + statusText, "auto", false);
         }
 
         function initAuto() {
@@ -486,12 +495,17 @@
             const messagesForMe = document.getElementById('messagesForMe');
 
             // Aanmelden bij start
-            updateCarStatusInFirebase("Aangemeld");
+            db.ref('cars/' + myName).update({
+                name: myName,
+                status: "Aangemeld",
+                lastUpdate: new Date().toLocaleTimeString()
+            });
 
             btnSend.addEventListener('click', () => {
                 const msg = statusInput.value.trim();
                 if (!msg) return;
-                stuurChatBericht(msg, "auto");
+                // Dit is een echt bericht, dus WEL laten knipperen bij de centrale (true)
+                stuurChatBericht(msg, "auto", true);
                 statusInput.value = "";
             });
 
@@ -523,15 +537,7 @@
             });
         }
 
-        function updateCarStatusInFirebase(status) {
-            db.ref('cars/' + myName).update({
-                name: myName,
-                status: status,
-                lastUpdate: new Date().toLocaleTimeString()
-            });
-        }
-
-        function stuurChatBericht(tekst, senderType) {
+        function stuurChatBericht(tekst, senderType, triggerKnipperen) {
             const newMsgRef = db.ref('chats/' + myName).push();
             newMsgRef.set({
                 sender: senderType,
@@ -540,10 +546,15 @@
                 time: new Date().toLocaleTimeString()
             });
 
-            db.ref('cars/' + myName).update({
-                hasUnreadMessage: true,
+            // Update auto data (triggerKnipperen is true bij een echt bericht, false bij alleen status)
+            let updateData = {
                 lastUpdate: new Date().toLocaleTimeString()
-            });
+            };
+            if (triggerKnipperen) {
+                updateData.hasUnreadMessage = true;
+            }
+
+            db.ref('cars/' + myName).update(updateData);
         }
 
         // --- FUNCTIES VOOR CENTRALE ---
@@ -562,13 +573,21 @@
                         const car = cars[key];
                         const tile = document.createElement('div');
                         
+                        // Bepaal de kleur van de tegel op basis van de status
+                        let statusClass = "tile-afgemeld";
+                        if (car.status === "Aangemeld") statusClass = "tile-aangemeld";
+                        else if (car.status === "Bezet") statusClass = "tile-bezet";
+                        else if (car.status === "Pauze") statusClass = "tile-pauze";
+                        else if (car.status === "Afgemeld") statusClass = "tile-afgemeld";
+
+                        // Knipperen ALLEEN als er een ongelezen bericht is
                         let knipperClass = car.hasUnreadMessage ? "knipperen" : "";
-                        tile.className = `car-tile ${knipperClass}`;
+                        tile.className = `car-tile ${statusClass} ${knipperClass}`;
 
                         tile.innerHTML = `
                             <h4>${car.name}</h4>
                             <p><strong>Status:</strong> ${car.status || 'Onbekend'}</p>
-                            <p style="font-size: 11px; color: #777; margin-top: 4px;">Update: ${car.lastUpdate || '-'}</p>
+                            <p style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Update: ${car.lastUpdate || '-'}</p>
                         `;
 
                         tile.addEventListener('click', () => {
@@ -603,7 +622,7 @@
             document.getElementById('modalReplyInput').value = "";
             document.getElementById('centralModal').style.display = 'flex';
 
-            // Stop knipperen
+            // Stop knipperen zodra de tegel wordt geopend
             db.ref('cars/' + car.name).update({ hasUnreadMessage: false });
 
             // Laad live chatgeschiedenis voor deze auto in de popup
@@ -633,7 +652,7 @@
             }
         }
 
-        // Antwoord sturen vanuit de modal naar de auto
+        // Antwoord sturen vanuit de modal naar de auto (geen knipperen nodig voor centrale-antwoorden)
         window.sendReplyFromModal = function() {
             const text = document.getElementById('modalReplyInput').value.trim();
             if (!text || !selectedCarForModal) return;
@@ -649,7 +668,7 @@
             document.getElementById('modalReplyInput').value = "";
         }
 
-        // Status wijzigen vanuit de modal
+        // Status wijzigen vanuit de modal (kleurt direct mee, gaat niet knipperen)
         window.setCarStatusFromModal = function(newStatus) {
             if (!selectedCarForModal) return;
 
