@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vervoer - Live Ritten</title>
+    <title>Vervoer - Ritten & GPS</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
-    <!-- LOGIN SCHEM (Komt eerst als je de app opent) -->
+    <!-- LOGIN SCHEM (Altijd netjes gecentreerd) -->
     <div id="login-screen" class="login-overlay">
         <div class="login-box">
-            <h2>🚚 Inloggen bij Vervoer</h2>
-            <p>Vul je naam of voertuignummer in om te starten:</p>
-            <input type="text" id="usernameInput" placeholder="Bijv. Jan of Auto 2">
+            <h2>🚚 Vervoer Inloggen</h2>
+            <p>Vul je naam of voertuignummer in:</p>
+            <input type="text" id="usernameInput" placeholder="Bijv. Jan of Auto 1">
             <button id="btnLogin">Inloggen & Starten</button>
         </div>
     </div>
 
     <!-- Desktop Omgeving (Windows Style) -->
     <div id="desktop">
-        <!-- Venster 1: Ritten & Status -->
+        <!-- Venster 1: Ritten & Live Overzicht -->
         <div class="window" id="window-data">
             <div class="window-header">
                 <span class="title">🚚 Vervoer - Ritten Monitor</span>
@@ -45,14 +45,13 @@
 
                 <hr>
 
-                <!-- CENTRALE WEERGAVE (Vooral handig op de Lenovo M10) -->
+                <!-- Centrale overzicht (Ideaal voor Lenovo M10) -->
                 <div class="live-display">
-                    <h4>📡 Centrale Overzicht (Wie is waar?)</h4>
+                    <h4>📡 Actieve Apparaten / Ritten</h4>
                     <ul id="activeUsersList">
-                        <!-- Hier verschijnen live alle ingelogde apparaten -->
-                        <li>Laden van actieve apparaten...</li>
+                        <li>Laden...</li>
                     </ul>
-                    <p class="sync-indicator">🟢 Realtime verbonden met Centrale</p>
+                    <p class="sync-indicator">🟢 Realtime verbonden</p>
                 </div>
             </div>
         </div>
@@ -79,8 +78,8 @@
     <div id="taskbar">
         <button id="start-btn">🪟 Start</button>
         <div id="open-apps">
-            <button class="taskbar-item active" data-window="window-data">🚚 Ritten Monitor</button>
-            <button class="taskbar-item active" data-window="window-info">📍 GPS Locatie</button>
+            <button class="taskbar-item active" data-window="window-data">🚚 Ritten</button>
+            <button class="taskbar-item active" data-window="window-info">📍 GPS</button>
         </div>
         <div id="clock">00:00</div>
     </div>
