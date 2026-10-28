@@ -169,25 +169,25 @@
         <div class="login-box">
             <h2>Vervoer Systeem</h2>
             <p>Wie ben je?</p>
-            <input type="text" id="deviceNameInput" placeholder="Naam (bijv. Auto 1 of Jan)">
+            <input type="text" id="deviceNameInput" placeholder="Naam (bijv. Auto 1 of Centrale M10)">
             <select id="roleInput">
-                <option value="auto">Auto / Chauffeur (Client)</option>
-                <option value="centrale">Centrale (Lenovo M10)</option>
+                <option value="Auto">Auto / Chauffeur (Client)</option>
+                <option value="Centrale">Centrale (Lenovo M10)</option>
             </select>
             <button id="btnLogin">Inloggen</button>
         </div>
     </div>
 
-    <!-- HOOFDSCHERM (Wordt zichtbaar na inloggen) -->
+    <!-- HOOFDSCHERM -->
     <div id="app-container" style="display: none;">
         <h2 id="welcomeHeader">Verbonden als: <span id="roleDisplay"></span></h2>
 
         <!-- VOOR AUTO'S / CHAUFFEURS -->
         <div id="auto-panel" class="panel" style="display: none;">
-            <h3>🚗 Mijn Status & Bericht naar Centrale</h3>
-            <label>Status / Locatie update:</label>
+            <h3>🚗 Mijn Status & Bericht</h3>
+            <label>Status update:</label>
             <input type="text" id="autoStatusInput" placeholder="Bijv. Onderweg naar bestemming...">
-            <button class="action-btn" id="btnSendAutoStatus">Stuur naar Centrale</button>
+            <button class="action-btn" id="btnSendAutoStatus">Update Status</button>
             
             <h3 style="margin-top: 15px;">📥 Berichten van Centrale:</h3>
             <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
@@ -195,11 +195,11 @@
 
         <!-- VOOR DE CENTRALE (LENOVO M10) -->
         <div id="centrale-panel" class="panel" style="display: none;">
-            <h3>📡 Centrale Overzicht: Alle Actieve Auto's</h3>
-            <ul id="allCarsList"><li>Wachten op actieve auto's...</li></ul>
+            <h3>📡 Centrale Overzicht: Alle Actieve Apparaten</h3>
+            <ul id="allUsersList"><li>Wachten op actieve apparaten...</li></ul>
 
-            <h3 style="margin-top: 20px;">📢 Algemeen Bericht Sturen naar ALLE Auto's</h3>
-            <textarea id="broadcastInput" placeholder="Typ een bericht voor iedereen..."></textarea>
+            <h3 style="margin-top: 20px;">📢 Algemeen Bericht Sturen naar Iedereen</h3>
+            <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's en centrales..."></textarea>
             <button class="action-btn" id="btnSendBroadcast">Verstuur naar iedereen</button>
         </div>
     </div>
@@ -248,7 +248,10 @@
             appContainer.style.display = 'flex';
             roleDisplay.innerText = `${myName} (${myRole})`;
 
-            if (myRole === 'centrale') {
+            // DIRECT bij inloggen registreren in Firebase onder 'users'
+            registerInFirebase("Online");
+
+            if (myRole === 'Centrale') {
                 centralePanel.style.display = 'block';
                 initCentrale();
             } else {
@@ -257,20 +260,25 @@
             }
         });
 
+        function registerInFirebase(statusText) {
+            db.ref('users/' + myName).set({
+                name: myName,
+                role: myRole,
+                status: statusText,
+                lastUpdate: new Date().toLocaleTimeString()
+            });
+        }
+
         // --- FUNCTIES VOOR AUTO ---
         function initAuto() {
             const statusInput = document.getElementById('autoStatusInput');
             const btnSend = document.getElementById('btnSendAutoStatus');
             const messagesForMe = document.getElementById('messagesForMe');
 
-            // Status doorsturen naar Firebase
+            // Status updaten wanneer je op de knop klikt
             btnSend.addEventListener('click', () => {
-                db.ref('autos/' + myName).set({
-                    name: myName,
-                    status: statusInput.value || "Online",
-                    lastUpdate: new Date().toLocaleTimeString()
-                });
-                alert("Status verzonden naar centrale!");
+                registerInFirebase(statusInput.value || "Online");
+                alert("Status bijgewerkt en verzonden naar centrale!");
             });
 
             // Luisteren naar algemene berichten van de centrale
@@ -284,23 +292,23 @@
 
         // --- FUNCTIES VOOR CENTRALE ---
         function initCentrale() {
-            const allCarsList = document.getElementById('allCarsList');
+            const allUsersList = document.getElementById('allUsersList');
             const broadcastInput = document.getElementById('broadcastInput');
             const btnSendBroadcast = document.getElementById('btnSendBroadcast');
 
-            // Luisteren naar alle actieve auto's
-            db.ref('autos').on('value', (snapshot) => {
-                const cars = snapshot.val();
-                allCarsList.innerHTML = "";
-                if (cars) {
-                    Object.keys(cars).forEach(key => {
-                        const car = cars[key];
+            // Luisteren naar ALLE actieve gebruikers (zowel auto's als centrales)
+            db.ref('users').on('value', (snapshot) => {
+                const users = snapshot.val();
+                allUsersList.innerHTML = "";
+                if (users) {
+                    Object.keys(users).forEach(key => {
+                        const user = users[key];
                         const li = document.createElement('li');
-                        li.innerHTML = `<strong>${car.name}</strong>: ${car.status} <br><small>Laatste update: ${car.lastUpdate}</small>`;
-                        allCarsList.appendChild(li);
+                        li.innerHTML = `<strong>[${user.role}] ${user.name}</strong><br>Status: ${user.status} <br><small style="color:gray;">Laatste update: ${user.lastUpdate}</small>`;
+                        allUsersList.appendChild(li);
                     });
                 } else {
-                    allCarsList.innerHTML = "<li>Geen actieve auto's online.</li>";
+                    allUsersList.innerHTML = "<li>Geen actieve apparaten online.</li>";
                 }
             });
 
@@ -314,7 +322,7 @@
                     time: new Date().toLocaleTimeString()
                 });
                 broadcastInput.value = "";
-                alert("Bericht verzonden naar alle auto's!");
+                alert("Bericht verzonden naar iedereen!");
             });
         }
 
