@@ -13,7 +13,6 @@ const db = firebase.database();
 
 let currentUser = "";
 
-// Elementen
 const loginScreen = document.getElementById('login-screen');
 const usernameInput = document.getElementById('usernameInput');
 const btnLogin = document.getElementById('btnLogin');
@@ -23,7 +22,7 @@ const statusInput = document.getElementById('statusInput');
 const numberValue = document.getElementById('numberValue');
 const activeUsersList = document.getElementById('activeUsersList');
 
-// --- LOGIN AFHANDELING ---
+// Login actie
 btnLogin.addEventListener('click', () => {
     const name = usernameInput.value.trim();
     if (name === "") {
@@ -33,13 +32,11 @@ btnLogin.addEventListener('click', () => {
 
     currentUser = name;
     currentUserName.innerText = currentUser;
-    loginScreen.style.display = 'none'; // Verberg login scherm
+    loginScreen.style.display = 'none';
 
-    // Registreer dit apparaat direct in de database
     updateMyData();
 });
 
-// Stuur wijzigingen door naar Firebase onder een uniek pad voor deze gebruiker
 function updateMyData() {
     if (!currentUser) return;
 
@@ -55,10 +52,10 @@ function updateMyData() {
 statusInput.addEventListener('input', updateMyData);
 numberValue.addEventListener('input', updateMyData);
 
-// --- CENTRALE OVERZICHT (Leest alle actieve apparaten uit) ---
+// Realtime centrale lijst bijwerken
 db.ref('ritten').on('value', (snapshot) => {
     const allRitten = snapshot.val();
-    activeUsersList.innerHTML = ""; // Maak lijst leeg en bouw opnieuw op
+    activeUsersList.innerHTML = ""; 
 
     if (allRitten) {
         Object.keys(allRitten).forEach((key) => {
@@ -68,11 +65,11 @@ db.ref('ritten').on('value', (snapshot) => {
             activeUsersList.appendChild(li);
         });
     } else {
-        activeUsersList.innerHTML = "<li>Nog geen actieve ritten/apparaten.</li>";
+        activeUsersList.innerHTML = "<li>Nog geen actieve ritten.</li>";
     }
 });
 
-// --- GPS FUNCTIONALITEIT ---
+// GPS Functionaliteit
 document.getElementById('btnGps').addEventListener('click', () => {
     if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition((pos) => {
@@ -81,7 +78,6 @@ document.getElementById('btnGps').addEventListener('click', () => {
             document.getElementById('lat').innerText = lat.toFixed(5);
             document.getElementById('lng').innerText = lng.toFixed(5);
             
-            // Stuur GPS ook mee naar de database voor deze gebruiker
             if (currentUser) {
                 db.ref('ritten/' + currentUser + '/gps').set({ lat: lat, lng: lng });
             }
@@ -93,7 +89,7 @@ document.getElementById('btnGps').addEventListener('click', () => {
     }
 });
 
-// --- WINDOWS UI ---
+// Klok & Venster functionaliteit
 function updateClock() {
     const now = new Date();
     document.getElementById('clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
