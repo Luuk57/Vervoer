@@ -14,7 +14,7 @@ body {
     flex-direction: column;
 }
 
-/* Login Scherm Overlay - Altijd netjes gecentreerd op telefoon en tablet */
+/* Login Scherm - Perfect gecentreerd op elk scherm */
 .login-overlay {
     position: fixed;
     top: 0;
@@ -27,7 +27,6 @@ body {
     align-items: center;
     z-index: 9999;
     padding: 20px;
-    box-sizing: border-box;
 }
 
 .login-box {
