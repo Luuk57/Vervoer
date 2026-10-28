@@ -161,7 +161,7 @@
             background: transparent;
             border: none;
             color: #bbb;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             display: flex;
             flex-direction: column;
@@ -246,18 +246,23 @@
             border-radius: 4px;
             border-left: 4px solid #0078d7;
             font-size: 13px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .ride-info {
-            flex: 1;
+        .ride-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #252526;
+            border-left: 4px solid #107c41;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
         }
 
         .ride-actions {
             display: flex;
             gap: 6px;
+            margin-top: 5px;
         }
 
         .chat-history {
@@ -362,9 +367,15 @@
             
             <div id="tab-ritten" class="bct-screen active">
                 <div class="bct-card">
-                    <h3>📅 Mijn Ritten Vandaag</h3>
-                    <ul id="myRidesList"><li>Geen ritten gepland voor vandaag.</li></ul>
+                    <h3>📅 Planning / Ritten</h3>
+                    <ul id="myRidesList"><li>Geen ritten gepland.</li></ul>
                 </div>
+
+                <div class="bct-card">
+                    <h3>✅ Voltooide Ritten (Gereed)</h3>
+                    <ul id="myCompletedRidesList"><li>Geen voltooide ritten.</li></ul>
+                </div>
+
                 <div class="bct-card">
                     <h3>🟢 Snelle Status Wijzigen</h3>
                     <div class="status-grid">
@@ -404,7 +415,6 @@
         <!-- 2. CENTRALE SCHERM (Lenovo M10) -->
         <div id="centrale-app" style="display: none; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
             
-            <!-- TAB 1: PLANNING & RITTEN (STANDAARD STARTKERM VOOR CENTRALE) -->
             <div id="centrale-tab-plan" class="bct-screen active">
                 <div class="bct-card">
                     <h3 id="formTitle">📅 Nieuwe Rit Inplannen</h3>
@@ -432,7 +442,6 @@
                 </div>
             </div>
 
-            <!-- TAB 2: COMMUNICATIE (Tegels & Overzicht) -->
             <div id="centrale-tab-comm" class="bct-screen">
                 <div class="bct-card">
                     <h3>📡 Centrale Dispatch - Actieve Voertuigen</h3>
@@ -448,7 +457,6 @@
                 </div>
             </div>
 
-            <!-- CENTRALE NAVIGATIEBALK ONDERIN -->
             <div class="bct-nav">
                 <button class="bct-nav-btn active" onclick="switchCentraleTab('plan', this)">📅 Planning & Ritten</button>
                 <button class="bct-nav-btn" onclick="switchCentraleTab('comm', this)">📡 Communicatie</button>
@@ -539,26 +547,21 @@
             }
         });
 
-        // Klok in BCT header
         setInterval(() => {
             const now = new Date();
             document.getElementById('bctClock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }, 1000);
 
-        // Tabwisseling Auto
         window.switchTab = function(tabName, btnElement) {
             document.querySelectorAll('#driver-app .bct-screen').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('#driver-app .bct-nav-btn').forEach(b => b.classList.remove('active'));
-            
             document.getElementById('tab-' + tabName).classList.add('active');
             btnElement.classList.add('active');
         }
 
-        // Tabwisseling Centrale
         window.switchCentraleTab = function(tabName, btnElement) {
             document.querySelectorAll('#centrale-app .bct-screen').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('#centrale-app .bct-nav-btn').forEach(b => b.classList.remove('active'));
-            
             document.getElementById('centrale-tab-' + tabName).classList.add('active');
             btnElement.classList.add('active');
         }
@@ -602,24 +605,66 @@
                 historyBox.scrollTop = historyBox.scrollHeight;
             });
 
+            // Ritten ophalen, sorteren op datum/tijd, en opsplitsen in actief vs gereed
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 const myRidesList = document.getElementById('myRidesList');
-                let html = "";
-                let count = 0;
+                const myCompletedRidesList = document.getElementById('myCompletedRidesList');
+                
+                let activeHtml = "";
+                let completedHtml = "";
+                let activeCount = 0;
+                let completedCount = 0;
 
                 if (rides) {
-                    Object.keys(rides).forEach(key => {
-                        const r = rides[key];
-                        if (r.assignedCar === myName && r.date === todayStr) {
-                            count++;
-                            html += `<li><strong>⏰ ${r.time}</strong> - ${r.client}<br><small>📍 ${r.address}</small></li>`;
+                    // Omzetten naar array om te kunnen sorteren op datum en tijd
+                    let rideArray = Object.keys(rides).map(key => ({ id: key, ...rides[key] }));
+                    rideArray.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+                    rideArray.forEach(r => {
+                        if (r.assignedCar === myName) {
+                            if (r.status === "Gereed") {
+                                completedCount++;
+                                completedHtml += `<li><strong>[${r.date} ${r.time}]</strong> ${r.client} (${r.address})<br><small style="color:#aaa;">Start: ${r.startTime || '-'} | Stop: ${r.stopTime || '-'}</small></li>`;
+                            } else {
+                                activeCount++;
+                                let statusLabel = r.status || "Gepland";
+                                activeHtml += `
+                                    <div class="ride-item">
+                                        <div><strong>📅 ${r.date} ⏰ ${r.time}</strong> - ${r.client}<br><small>📍 ${r.address}</small><br><small style="color:#ffb900;">Status: ${statusLabel}</small></div>
+                                        <div class="ride-actions">
+                                            <button class="bct-btn bct-btn-green" onclick="updateRideStatus('${r.id}', 'Gestart')">Start</button>
+                                            <button class="bct-btn bct-btn-orange" onclick="updateRideStatus('${r.id}', 'Gestopt')">Stop</button>
+                                            <button class="bct-btn bct-btn-blue" onclick="updateRideStatus('${r.id}', 'Gereed')">Leeg melden</button>
+                                        </div>
+                                    </div>`;
+                            }
                         }
                     });
                 }
-                if (count === 0) html = "<li>Geen ritten gepland voor vandaag.</li>";
-                myRidesList.innerHTML = html;
+
+                if (activeCount === 0) activeHtml = "<li>Geen actieve ritten.</li>";
+                if (completedCount === 0) completedHtml = "<li>Geen voltooide ritten.</li>";
+
+                myRidesList.innerHTML = activeHtml;
+                myCompletedRidesList.innerHTML = completedHtml;
             });
+        }
+
+        window.updateRideStatus = function(rideId, newStatus) {
+            let updateData = { status: newStatus };
+            const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (newStatus === 'Gestart') {
+                updateData.startTime = currentTime;
+            } else if (newStatus === 'Gestopt') {
+                updateData.stopTime = currentTime;
+            } else if (newStatus === 'Gereed') {
+                updateData.stopTime = updateData.stopTime || currentTime;
+            }
+
+            db.ref('rides/' + rideId).update(updateData);
+            stuurChatBericht(`Rit bijgewerkt naar: ${newStatus}`, "auto", false);
         }
 
         window.sendDriverMessage = function() {
@@ -679,22 +724,24 @@
                 }
             });
 
-            // Geplande ritten ophalen met Bewerken & Verwijderen knoppen
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 let html = "";
                 if (rides) {
-                    Object.keys(rides).forEach(key => {
-                        const r = rides[key];
+                    let rideArray = Object.keys(rides).map(key => ({ id: key, ...rides[key] }));
+                    rideArray.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+                    rideArray.forEach(r => {
+                        let statusText = r.status ? ` [Status: ${r.status}]` : '';
                         html += `
                             <li>
                                 <div class="ride-info">
-                                    <strong>[${r.date} - ${r.time}]</strong> Auto: <em>${r.assignedCar}</em><br>
+                                    <strong>[${r.date} - ${r.time}]</strong> Auto: <em>${r.assignedCar}</em>${statusText}<br>
                                     Klant: <strong>${r.client}</strong> | Adres: ${r.address}
                                 </div>
                                 <div class="ride-actions">
-                                    <button class="bct-btn bct-btn-blue" onclick="editRide('${key}', '${r.date}', '${r.time}', '${r.client}', '${r.address}', '${r.assignedCar}')">Bewerk</button>
-                                    <button class="bct-btn bct-btn-red" onclick="deleteRide('${key}')">Delete</button>
+                                    <button class="bct-btn bct-btn-blue" onclick="editRide('${r.id}', '${r.date}', '${r.time}', '${r.client}', '${r.address}', '${r.assignedCar}')">Bewerk</button>
+                                    <button class="bct-btn bct-btn-red" onclick="deleteRide('${r.id}')">Delete</button>
                                 </div>
                             </li>`;
                     });
@@ -715,15 +762,13 @@
 
             if (!date || !time || !client || !address || !car) { alert("Vul alle velden in!"); return; }
 
-            const rideData = { date, time, client, address, assignedCar: car, createdTime: new Date().toLocaleTimeString() };
+            const rideData = { date, time, client, address, assignedCar: car, status: 'Gepland', createdTime: new Date().toLocaleTimeString() };
 
             if (editId) {
-                // Bestaande rit updaten
                 db.ref('rides/' + editId).update(rideData);
                 alert("Rit succesvol bijgewerkt!");
                 cancelEdit();
             } else {
-                // Nieuwe rit aanmaken
                 db.ref('rides').push().set(rideData);
                 alert(`Rit ingepland voor ${car} op ${date} om ${time}!`);
                 document.getElementById('planClient').value = "";
@@ -742,8 +787,6 @@
             document.getElementById('formTitle').innerText = "✏️ Rit Bewerken";
             document.getElementById('saveRideBtn').innerText = "Wijzigingen Opslaan";
             document.getElementById('cancelEditBtn').style.display = 'block';
-            
-            // Scroll naar boven naar hetformulier
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
