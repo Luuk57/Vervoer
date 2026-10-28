@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vervoer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+    <!-- Desktop Omgeving -->
+    <div id="desktop">
+        <!-- Venster 1: Live Data & Input -->
+        <div class="window" id="window-data">
+            <div class="window-header">
+                <span class="title">🚚 Vervoer Live Monitor</span>
+                <div class="controls">
+                    <button class="btn-min">-</button>
+                    <button class="btn-close">×</button>
+                </div>
+            </div>
+            <div class="window-body">
+                <h3>Realtime Vervoer Data</h3>
+                <p>Pas hieronder een waarde aan. Elk ander apparaat (A, B of C) ziet het **direct** veranderen!</p>
+                
+                <div class="input-group">
+                    <label for="statusInput">Status Bericht / Rit status:</label>
+                    <input type="text" id="statusInput" placeholder="Typ iets live...">
+                </div>
+
+                <div class="input-group">
+                    <label for="numberValue">Live Waarde / Lading / Km:</label>
+                    <input type="number" id="numberValue" placeholder="0">
+                </div>
+
+                <hr>
+
+                <div class="live-display">
+                    <p><strong>Live Ontvangen Bericht:</strong> <span id="liveStatusDisplay">-</span></p>
+                    <p><strong>Live Ontvangen Waarde:</strong> <span id="liveValueDisplay">-</span></p>
+                    <p class="sync-indicator">🟢 Realtime verbonden</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Venster 2: GPS & Systeeminformatie -->
+        <div class="window" id="window-info">
+            <div class="window-header">
+                <span class="title">📍 GPS & Locatie</span>
+                <div class="controls">
+                    <button class="btn-min">-</button>
+                    <button class="btn-close">×</button>
+                </div>
+            </div>
+            <div class="window-body">
+                <h3>GPS & Apparaat Status</h3>
+                <p>Breedtegraad: <span id="lat">-</span></p>
+                <p>Lengtegraad: <span id="lng">-</span></p>
+                <button id="btnGps">📍 Start Live GPS Tracking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Windows Taakbalk -->
+    <div id="taskbar">
+        <button id="start-btn">🪟 Start</button>
+        <div id="open-apps">
+            <button class="taskbar-item active" data-window="window-data">🚚 Vervoer Live</button>
+            <button class="taskbar-item active" data-window="window-info">📍 GPS Locatie</button>
+        </div>
+        <div id="clock">00:00</div>
+    </div>
+
+    <!-- Firebase Realtime Database SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
