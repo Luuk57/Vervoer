@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vervoer Centrale Dashboard</title>
+    <title>Vervoer Centrale & Planning</title>
 
     <!-- Inline Web App Manifest (PWA) -->
     <link rel="manifest" href='data:application/manifest+json,{
@@ -116,6 +116,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin-bottom: 15px;
         }
 
         .panel h3 {
@@ -123,7 +124,7 @@
             color: #0078d7;
         }
 
-        input[type="text"], textarea {
+        input[type="text"], input[type="date"], input[type="time"], select, textarea {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
@@ -371,16 +372,37 @@
             <input type="text" id="autoStatusInput" placeholder="Typ je bericht...">
             <button class="action-btn" id="btnSendAutoStatus">Verstuur Bericht</button>
             
+            <h3 style="margin-top: 15px;">📅 Mijn Ritten voor Vandaag:</h3>
+            <ul id="myRidesList"><li>Geen ritten voor vandaag.</li></ul>
+
             <h3 style="margin-top: 15px;">📥 Berichten (Privé & Algemeen):</h3>
             <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
         </div>
 
         <!-- VOOR DE CENTRALE (LENOVO M10) -->
         <div id="centrale-panel" class="panel" style="display: none;">
-            <h3>📡 Centrale Tegel-Overzicht (Klik op een auto voor chat & details)</h3>
+            <h3>📡 Centrale Tegel-Overzicht (Klik op auto voor chat)</h3>
             <div id="tilesGrid" class="tiles-grid">
                 <p>Wachten op actieve auto's...</p>
             </div>
+
+            <h3 style="margin-top: 25px;">📅 Planning & Ritten Inplannen</h3>
+            <label>Kies Datum:</label>
+            <input type="date" id="planDate">
+            <label>Kies Tijd:</label>
+            <input type="time" id="planTime">
+            <label>Naam / Klant:</label>
+            <input type="text" id="planClient" placeholder="Klantnaam of Omschrijving...">
+            <label>Adres / Bestemming:</label>
+            <input type="text" id="planAddress" placeholder="Ophaaladres / Bestemming...">
+            <label>Toewijzen aan Auto:</label>
+            <select id="planCarSelect">
+                <option value="">-- Kies een auto --</option>
+            </select>
+            <button class="action-btn" onclick="saveNewRide()">Rit Inplannen & Doorsturen</button>
+
+            <h3 style="margin-top: 25px;">📋 Alle Geplande Ritten</h3>
+            <ul id="allPlannedRidesList"><li>Geen ritten ingepland.</li></ul>
 
             <h3 style="margin-top: 25px;">📢 Algemeen Bericht Sturen naar Iedereen</h3>
             <textarea id="broadcastInput" placeholder="Typ een bericht voor alle auto's..."></textarea>
@@ -400,9 +422,7 @@
             
             <div>
                 <label style="font-size: 12px; font-weight: bold;">Chat Geschiedenis:</label>
-                <div id="modalChatHistory" class="chat-history">
-                    <!-- Berichten komen hier -->
-                </div>
+                <div id="modalChatHistory" class="chat-history"></div>
             </div>
 
             <div style="margin-bottom: 8px;">
@@ -447,6 +467,9 @@
         let myRole = "";
         let selectedCarForModal = "";
 
+        // Huidige datum formatteren als YYYY-MM-DD voor de standaard waarde
+        const todayStr = new Date().toISOString().split('T')[0];
+
         const loginScreen = document.getElementById('login-screen');
         const deviceNameInput = document.getElementById('deviceNameInput');
         const roleInput = document.getElementById('roleInput');
@@ -471,6 +494,7 @@
 
             if (myRole === 'Centrale') {
                 centralePanel.style.display = 'block';
+                document.getElementById('planDate').value = todayStr; // Standaard vandaag
                 initCentrale();
             } else {
                 autoPanel.style.display = 'block';
@@ -480,7 +504,6 @@
 
         // --- FUNCTIES VOOR AUTO ---
         window.setMyStatus = function(statusText) {
-            // Alleen status updaten, GEEN hasUnreadMessage op true zetten (dus niet knipperen)
             db.ref('cars/' + myName).update({
                 name: myName,
                 status: statusText,
@@ -493,6 +516,7 @@
             const statusInput = document.getElementById('autoStatusInput');
             const btnSend = document.getElementById('btnSendAutoStatus');
             const messagesForMe = document.getElementById('messagesForMe');
+            const myRidesList = document.getElementById('myRidesList');
 
             // Aanmelden bij start
             db.ref('cars/' + myName).update({
@@ -504,12 +528,11 @@
             btnSend.addEventListener('click', () => {
                 const msg = statusInput.value.trim();
                 if (!msg) return;
-                // Dit is een echt bericht, dus WEL laten knipperen bij de centrale (true)
                 stuurChatBericht(msg, "auto", true);
                 statusInput.value = "";
             });
 
-            // Luisteren naar chatberichten voor deze auto
+            // Luisteren naar chatberichten
             db.ref('chats/' + myName).on('value', (snapshot) => {
                 const chats = snapshot.val();
                 let html = "";
@@ -523,6 +546,32 @@
                     html = "<li>Nog geen berichten.</li>";
                 }
                 messagesForMe.innerHTML = html;
+            });
+
+            // Luisteren naar geplande ritten (FILTER OP VANDAAGSE DATUM)
+            db.ref('rides').on('value', (snapshot) => {
+                const rides = snapshot.val();
+                let html = "";
+                let count = 0;
+
+                if (rides) {
+                    Object.keys(rides).forEach(key => {
+                        const r = rides[key];
+                        // Controleer of de rit voor deze auto is EN of de datum exact vandaag is
+                        if (r.assignedCar === myName && r.date === todayStr) {
+                            count++;
+                            html += `<li style="background: #e2f0d9; border-left: 4px solid #385723; margin-bottom: 6px; padding: 8px;">
+                                <strong>⏰ ${r.time}</strong> - ${r.client}<br>
+                                <small>📍 Adres: ${r.address}</small>
+                            </li>`;
+                        }
+                    });
+                }
+
+                if (count === 0) {
+                    html = "<li>Geen ritten gepland voor vandaag.</li>";
+                }
+                myRidesList.innerHTML = html;
             });
 
             // Luisteren naar algemene broadcast berichten
@@ -546,13 +595,8 @@
                 time: new Date().toLocaleTimeString()
             });
 
-            // Update auto data (triggerKnipperen is true bij een echt bericht, false bij alleen status)
-            let updateData = {
-                lastUpdate: new Date().toLocaleTimeString()
-            };
-            if (triggerKnipperen) {
-                updateData.hasUnreadMessage = true;
-            }
+            let updateData = { lastUpdate: new Date().toLocaleTimeString() };
+            if (triggerKnipperen) updateData.hasUnreadMessage = true;
 
             db.ref('cars/' + myName).update(updateData);
         }
@@ -560,27 +604,35 @@
         // --- FUNCTIES VOOR CENTRALE ---
         function initCentrale() {
             const tilesGrid = document.getElementById('tilesGrid');
+            const planCarSelect = document.getElementById('planCarSelect');
+            const allPlannedRidesList = document.getElementById('allPlannedRidesList');
             const broadcastInput = document.getElementById('broadcastInput');
             const btnSendBroadcast = document.getElementById('btnSendBroadcast');
 
-            // Luisteren naar alle auto's voor tegels
+            // Luisteren naar actieve auto's voor tegels én keuzemenu in planning
             db.ref('cars').on('value', (snapshot) => {
                 const cars = snapshot.val();
                 tilesGrid.innerHTML = "";
+                planCarSelect.innerHTML = '<option value="">-- Kies een auto --</option>';
 
                 if (cars) {
                     Object.keys(cars).forEach(key => {
                         const car = cars[key];
-                        const tile = document.createElement('div');
                         
-                        // Bepaal de kleur van de tegel op basis van de status
+                        // Dropdown vullen
+                        const opt = document.createElement('option');
+                        opt.value = car.name;
+                        opt.innerText = car.name;
+                        planCarSelect.appendChild(opt);
+
+                        // Tegels renderen
+                        const tile = document.createElement('div');
                         let statusClass = "tile-afgemeld";
                         if (car.status === "Aangemeld") statusClass = "tile-aangemeld";
                         else if (car.status === "Bezet") statusClass = "tile-bezet";
                         else if (car.status === "Pauze") statusClass = "tile-pauze";
                         else if (car.status === "Afgemeld") statusClass = "tile-afgemeld";
 
-                        // Knipperen ALLEEN als er een ongelezen bericht is
                         let knipperClass = car.hasUnreadMessage ? "knipperen" : "";
                         tile.className = `car-tile ${statusClass} ${knipperClass}`;
 
@@ -590,15 +642,30 @@
                             <p style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Update: ${car.lastUpdate || '-'}</p>
                         `;
 
-                        tile.addEventListener('click', () => {
-                            openModal(car);
-                        });
-
+                        tile.addEventListener('click', () => openModal(car));
                         tilesGrid.appendChild(tile);
                     });
                 } else {
                     tilesGrid.innerHTML = "<p>Geen actieve auto's gevonden.</p>";
                 }
+            });
+
+            // Alle geplande ritten tonen bij de centrale
+            db.ref('rides').on('value', (snapshot) => {
+                const rides = snapshot.val();
+                let html = "";
+                if (rides) {
+                    Object.keys(rides).forEach(key => {
+                        const r = rides[key];
+                        html += `<li>
+                            <strong>[${r.date} om ${r.time}]</strong> Auto: <em>${r.assignedCar}</em><br>
+                            Klant: <strong>${r.client}</strong> | Adres: ${r.address}
+                        </li>`;
+                    });
+                } else {
+                    html = "<li>Geen ritten ingepland.</li>";
+                }
+                allPlannedRidesList.innerHTML = html;
             });
 
             btnSendBroadcast.addEventListener('click', () => {
@@ -614,6 +681,41 @@
             });
         }
 
+        // Nieuwe rit inplannen vanuit de centrale
+        window.saveNewRide = function() {
+            const date = document.getElementById('planDate').value;
+            const time = document.getElementById('planTime').value;
+            const client = document.getElementById('planClient').value.trim();
+            const address = document.getElementById('planAddress').value.trim();
+            const car = document.getElementById('planCarSelect').value;
+
+            if (!date || !time || !client || !address || !car) {
+                alert("Vul alle velden van de planning in!");
+                return;
+            }
+
+            // Opslaan in Firebase onder 'rides'
+            const newRideRef = db.ref('rides').push();
+            newRideRef.set({
+                date: date,
+                time: time,
+                client: client,
+                address: address,
+                assignedCar: car,
+                createdTime: new Date().toLocaleTimeString()
+            });
+
+            // Velden leegmaken
+            document.getElementById('planClient').value = "";
+            document.getElementById('planAddress').value = "";
+            
+            let melding = `Rit succesvol ingepland voor ${car} op ${date} om ${time}!`;
+            if (date !== todayStr) {
+                melding += `\n(Let op: Deze rit verschijnt pas op het scherm van ${car} op ${date}).`;
+            }
+            alert(melding);
+        }
+
         // Open popup en laad de chatgeschiedenis
         function openModal(car) {
             selectedCarForModal = car.name;
@@ -622,10 +724,8 @@
             document.getElementById('modalReplyInput').value = "";
             document.getElementById('centralModal').style.display = 'flex';
 
-            // Stop knipperen zodra de tegel wordt geopend
             db.ref('cars/' + car.name).update({ hasUnreadMessage: false });
 
-            // Laad live chatgeschiedenis voor deze auto in de popup
             db.ref('chats/' + car.name).on('value', (snapshot) => {
                 const chats = snapshot.val();
                 const historyBox = document.getElementById('modalChatHistory');
@@ -652,7 +752,6 @@
             }
         }
 
-        // Antwoord sturen vanuit de modal naar de auto (geen knipperen nodig voor centrale-antwoorden)
         window.sendReplyFromModal = function() {
             const text = document.getElementById('modalReplyInput').value.trim();
             if (!text || !selectedCarForModal) return;
@@ -668,7 +767,6 @@
             document.getElementById('modalReplyInput').value = "";
         }
 
-        // Status wijzigen vanuit de modal (kleurt direct mee, gaat niet knipperen)
         window.setCarStatusFromModal = function(newStatus) {
             if (!selectedCarForModal) return;
 
