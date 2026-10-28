@@ -3,90 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vervoer - Ritten & GPS</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
+    <title>Windows Login PWA</title>
+
+    <!-- Inline Web App Manifest (PWA Instellingen) -->
+    <link rel="manifest" href='data:application/manifest+json,{
+        "name": "Windows Login App",
+        "short_name": "LoginApp",
+        "start_url": "./index.html",
+        "display": "standalone",
+        "background_color": "#0078d7",
+        "theme_color": "#0078d7",
+        "icons": [{
+            "src": "https://cdn-icons-png.flaticon.com/512/220/220212.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        }]
+    }'>
+
+    <!-- Opmaak (CSS) -->
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            /* Windows-achtige achtergrond */
+            background: #0078d7 url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Perfect gecentreerd inlogscherm op elk scherm (telefoon & tablet) */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 15px;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .login-box h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .login-box p {
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .login-box button:hover {
+            background: #005a9e;
+        }
+
+        #main-content {
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+    </style>
 </head>
 <body>
 
-    <!-- LOGIN SCHEM (Altijd netjes gecentreerd) -->
+    <!-- INLOGSCHERM -->
     <div id="login-screen" class="login-overlay">
         <div class="login-box">
-            <h2>🚚 Vervoer Inloggen</h2>
-            <p>Vul je naam of voertuignummer in:</p>
-            <input type="text" id="usernameInput" placeholder="Bijv. Jan of Auto 1">
-            <button id="btnLogin">Inloggen & Starten</button>
+            <h2>Windows Login</h2>
+            <p>Vul je naam of apparaat in om te starten:</p>
+            <input type="text" id="usernameInput" placeholder="Bijv. Centrale M10 of Telefoon">
+            <button id="btnLogin">Inloggen</button>
         </div>
     </div>
 
-    <!-- Desktop Omgeving (Windows Style) -->
-    <div id="desktop">
-        <!-- Venster 1: Ritten & Live Overzicht -->
-        <div class="window" id="window-data">
-            <div class="window-header">
-                <span class="title">🚚 Vervoer - Ritten Monitor</span>
-                <div class="controls">
-                    <button class="btn-min">-</button>
-                    <button class="btn-close">×</button>
-                </div>
-            </div>
-            <div class="window-body">
-                <h3>Welkom, <span id="currentUserName">-</span></h3>
-                
-                <div class="input-group">
-                    <label for="statusInput">Mijn Rit / Status:</label>
-                    <input type="text" id="statusInput" placeholder="Bijv. Onderweg naar klant...">
-                </div>
-
-                <div class="input-group">
-                    <label for="numberValue">Voortgang / Lading / Km:</label>
-                    <input type="number" id="numberValue" placeholder="0">
-                </div>
-
-                <hr>
-
-                <!-- Centrale overzicht (Ideaal voor Lenovo M10) -->
-                <div class="live-display">
-                    <h4>📡 Actieve Apparaten / Ritten</h4>
-                    <ul id="activeUsersList">
-                        <li>Laden...</li>
-                    </ul>
-                    <p class="sync-indicator">🟢 Realtime verbonden</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Venster 2: GPS & Locatie -->
-        <div class="window" id="window-info">
-            <div class="window-header">
-                <span class="title">📍 GPS & Locatie</span>
-                <div class="controls">
-                    <button class="btn-min">-</button>
-                    <button class="btn-close">×</button>
-                </div>
-            </div>
-            <div class="window-body">
-                <h3>GPS Status</h3>
-                <p>Breedtegraad: <span id="lat">-</span></p>
-                <p>Lengtegraad: <span id="lng">-</span></p>
-                <button id="btnGps">📍 Start GPS Tracking</button>
-            </div>
-        </div>
+    <!-- Hoofdscherm (Zichtbaar na inloggen) -->
+    <div id="main-content" style="display: none;">
+        <h1>Welkom, <span id="displayName"></span>!</h1>
+        <p>Je bent succesvol ingelogd.</p>
     </div>
 
-    <!-- Windows Taakbalk -->
-    <div id="taskbar">
-        <button id="start-btn">🪟 Start</button>
-        <div id="open-apps">
-            <button class="taskbar-item active" data-window="window-data">🚚 Ritten</button>
-            <button class="taskbar-item active" data-window="window-info">📍 GPS</button>
-        </div>
-        <div id="clock">00:00</div>
-    </div>
+    <!-- Logica (JavaScript) -->
+    <script>
+        const loginScreen = document.getElementById('login-screen');
+        const usernameInput = document.getElementById('usernameInput');
+        const btnLogin = document.getElementById('btnLogin');
+        const mainContent = document.getElementById('main-content');
+        const displayName = document.getElementById('displayName');
 
-    <!-- Firebase Realtime Database SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script src="app.js"></script>
+        btnLogin.addEventListener('click', () => {
+            const name = usernameInput.value.trim();
+            if (name === "") {
+                alert("Vul een naam in.");
+                return;
+            }
+
+            // Verberg inlogscherm en toon hoofdinhoud
+            loginScreen.style.display = 'none';
+            mainContent.style.display = 'block';
+            displayName.innerText = name;
+        });
+
+        // Inline Service Worker voor PWA functionaliteit
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', (e) => self.skipWaiting());
+                self.addEventListener('activate', (e) => self.clients.claim());
+                self.addEventListener('fetch', (e) => {
+                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Fout:', err));
+        }
+    </script>
 </body>
 </html>
