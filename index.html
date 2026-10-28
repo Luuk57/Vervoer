@@ -368,9 +368,7 @@
             <div id="tab-chat" class="bct-screen">
                 <div class="bct-card" style="flex: 1; display: flex; flex-direction: column;">
                     <h3>💬 Berichten met Centrale</h3>
-                    <div id="driverChatHistory" class="chat-history" style="flex: 1;">
-                        <!-- Berichten -->
-                    </div>
+                    <div id="driverChatHistory" class="chat-history" style="flex: 1;"></div>
                     <div style="display: flex; gap: 5px; margin-top: 5px;">
                         <input type="text" id="driverChatInput" placeholder="Typ bericht naar centrale..." style="margin-bottom:0;">
                         <button class="bct-btn bct-btn-blue" onclick="sendDriverMessage()" style="padding: 10px 15px;">Verstuur</button>
@@ -528,7 +526,6 @@
                 lastUpdate: new Date().toLocaleTimeString()
             });
 
-            // Badge bijwerken in BCT header
             const badge = document.getElementById('bctStatusBadge');
             badge.innerText = statusText;
             badge.className = "bct-status-indicator status-" + statusText.toLowerCase();
@@ -543,7 +540,6 @@
                 lastUpdate: new Date().toLocaleTimeString()
             });
 
-            // Luisteren naar chatgeschiedenis
             db.ref('chats/' + myName).on('value', (snapshot) => {
                 const chats = snapshot.val();
                 const historyBox = document.getElementById('driverChatHistory');
@@ -561,7 +557,6 @@
                 historyBox.scrollTop = historyBox.scrollHeight;
             });
 
-            // Luisteren naar ritten voor vandaag
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 const myRidesList = document.getElementById('myRidesList');
@@ -610,6 +605,7 @@
             const planCarSelect = document.getElementById('planCarSelect');
             const allPlannedRidesList = document.getElementById('allPlannedRidesList');
 
+            // Actieve auto's ophalen
             db.ref('cars').on('value', (snapshot) => {
                 const cars = snapshot.val();
                 tilesGrid.innerHTML = "";
@@ -639,6 +635,7 @@
                 }
             });
 
+            // Geplande ritten ophalen (blijft nu ook na refresh netjes zichtbaar bij de centrale)
             db.ref('rides').on('value', (snapshot) => {
                 const rides = snapshot.val();
                 let html = "";
@@ -647,7 +644,9 @@
                         const r = rides[key];
                         html += `<li><strong>[${r.date} - ${r.time}]</strong> Auto: <em>${r.assignedCar}</em> | Klant: <strong>${r.client}</strong> (${r.address})</li>`;
                     });
-                } else { html = "<li>Geen ritten ingepland.</li>"; }
+                } else { 
+                    html = "<li>Geen ritten ingepland.</li>"; 
+                }
                 allPlannedRidesList.innerHTML = html;
             });
         }
