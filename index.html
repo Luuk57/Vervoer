@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Windows Login PWA</title>
+    <title>Vervoer Communicatie Systeem</title>
 
-    <!-- Inline Web App Manifest (PWA Instellingen) -->
+    <!-- Inline Web App Manifest (PWA) -->
     <link rel="manifest" href='data:application/manifest+json,{
-        "name": "Windows Login App",
-        "short_name": "LoginApp",
+        "name": "Vervoer Communicatie",
+        "short_name": "VervoerCom",
         "start_url": "./index.html",
         "display": "standalone",
         "background_color": "#0078d7",
@@ -32,21 +32,19 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             height: 100vh;
             overflow: hidden;
-            /* Windows-achtige achtergrond */
             background: #0078d7 url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
         }
 
-        /* Perfect gecentreerd inlogscherm op elk scherm (telefoon & tablet) */
+        /* Perfect gecentreerd inlogscherm */
         .login-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -63,7 +61,6 @@
             max-width: 380px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         .login-box h2 {
@@ -72,12 +69,12 @@
         }
 
         .login-box p {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-size: 14px;
             color: #666;
         }
 
-        .login-box input {
+        .login-box input, .login-box select {
             width: 100%;
             padding: 12px;
             margin-bottom: 15px;
@@ -102,13 +99,66 @@
             background: #005a9e;
         }
 
-        #main-content {
+        /* Interface na inloggen */
+        #app-container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
             color: white;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.92);
+            color: #333;
             padding: 20px;
             border-radius: 8px;
-            backdrop-filter: blur(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .panel h3 {
+            margin-bottom: 10px;
+            color: #0078d7;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button.action-btn {
+            background: #107c41;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button.action-btn:hover {
+            background: #0b5a30;
+        }
+
+        ul {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        ul li {
+            background: #f0f4f8;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border-left: 4px solid #0078d7;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -117,41 +167,158 @@
     <!-- INLOGSCHERM -->
     <div id="login-screen" class="login-overlay">
         <div class="login-box">
-            <h2>Windows Login</h2>
-            <p>Vul je naam of apparaat in om te starten:</p>
-            <input type="text" id="usernameInput" placeholder="Bijv. Centrale M10 of Telefoon">
+            <h2>Vervoer Systeem</h2>
+            <p>Wie ben je?</p>
+            <input type="text" id="deviceNameInput" placeholder="Naam (bijv. Auto 1 of Jan)">
+            <select id="roleInput">
+                <option value="auto">Auto / Chauffeur (Client)</option>
+                <option value="centrale">Centrale (Lenovo M10)</option>
+            </select>
             <button id="btnLogin">Inloggen</button>
         </div>
     </div>
 
-    <!-- Hoofdscherm (Zichtbaar na inloggen) -->
-    <div id="main-content" style="display: none;">
-        <h1>Welkom, <span id="displayName"></span>!</h1>
-        <p>Je bent succesvol ingelogd.</p>
+    <!-- HOOFDSCHERM (Wordt zichtbaar na inloggen) -->
+    <div id="app-container" style="display: none;">
+        <h2 id="welcomeHeader">Verbonden als: <span id="roleDisplay"></span></h2>
+
+        <!-- VOOR AUTO'S / CHAUFFEURS -->
+        <div id="auto-panel" class="panel" style="display: none;">
+            <h3>🚗 Mijn Status & Bericht naar Centrale</h3>
+            <label>Status / Locatie update:</label>
+            <input type="text" id="autoStatusInput" placeholder="Bijv. Onderweg naar bestemming...">
+            <button class="action-btn" id="btnSendAutoStatus">Stuur naar Centrale</button>
+            
+            <h3 style="margin-top: 15px;">📥 Berichten van Centrale:</h3>
+            <ul id="messagesForMe"><li>Nog geen berichten.</li></ul>
+        </div>
+
+        <!-- VOOR DE CENTRALE (LENOVO M10) -->
+        <div id="centrale-panel" class="panel" style="display: none;">
+            <h3>📡 Centrale Overzicht: Alle Actieve Auto's</h3>
+            <ul id="allCarsList"><li>Wachten op actieve auto's...</li></ul>
+
+            <h3 style="margin-top: 20px;">📢 Algemeen Bericht Sturen naar ALLE Auto's</h3>
+            <textarea id="broadcastInput" placeholder="Typ een bericht voor iedereen..."></textarea>
+            <button class="action-btn" id="btnSendBroadcast">Verstuur naar iedereen</button>
+        </div>
     </div>
 
-    <!-- Logica (JavaScript) -->
+    <!-- Firebase SDK (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <!-- App Logica -->
     <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOj-x4BV4J1rkZ21Rl29D5kKnkTaswWVw",
+            authDomain: "tabos-vocht.firebaseapp.com",
+            databaseURL: "https://tabos-vocht-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "tabos-vocht",
+            storageBucket: "tabos-vocht.appspot.com",
+            messagingSenderId: "372380067963",
+            appId: "1:372380067963:web:a9edec9815588e64b41ade"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let myName = "";
+        let myRole = "";
+
         const loginScreen = document.getElementById('login-screen');
-        const usernameInput = document.getElementById('usernameInput');
+        const deviceNameInput = document.getElementById('deviceNameInput');
+        const roleInput = document.getElementById('roleInput');
         const btnLogin = document.getElementById('btnLogin');
-        const mainContent = document.getElementById('main-content');
-        const displayName = document.getElementById('displayName');
+        const appContainer = document.getElementById('app-container');
+        const roleDisplay = document.getElementById('roleDisplay');
+        const autoPanel = document.getElementById('auto-panel');
+        const centralePanel = document.getElementById('centrale-panel');
 
         btnLogin.addEventListener('click', () => {
-            const name = usernameInput.value.trim();
-            if (name === "") {
+            myName = deviceNameInput.value.trim();
+            myRole = roleInput.value;
+
+            if (myName === "") {
                 alert("Vul een naam in.");
                 return;
             }
 
-            // Verberg inlogscherm en toon hoofdinhoud
             loginScreen.style.display = 'none';
-            mainContent.style.display = 'block';
-            displayName.innerText = name;
+            appContainer.style.display = 'flex';
+            roleDisplay.innerText = `${myName} (${myRole})`;
+
+            if (myRole === 'centrale') {
+                centralePanel.style.display = 'block';
+                initCentrale();
+            } else {
+                autoPanel.style.display = 'block';
+                initAuto();
+            }
         });
 
-        // Inline Service Worker voor PWA functionaliteit
+        // --- FUNCTIES VOOR AUTO ---
+        function initAuto() {
+            const statusInput = document.getElementById('autoStatusInput');
+            const btnSend = document.getElementById('btnSendAutoStatus');
+            const messagesForMe = document.getElementById('messagesForMe');
+
+            // Status doorsturen naar Firebase
+            btnSend.addEventListener('click', () => {
+                db.ref('autos/' + myName).set({
+                    name: myName,
+                    status: statusInput.value || "Online",
+                    lastUpdate: new Date().toLocaleTimeString()
+                });
+                alert("Status verzonden naar centrale!");
+            });
+
+            // Luisteren naar algemene berichten van de centrale
+            db.ref('broadcast').on('value', (snapshot) => {
+                const msg = snapshot.val();
+                if (msg) {
+                    messagesForMe.innerHTML = `<li><strong>Centrale (${msg.time}):</strong> ${msg.text}</li>`;
+                }
+            });
+        }
+
+        // --- FUNCTIES VOOR CENTRALE ---
+        function initCentrale() {
+            const allCarsList = document.getElementById('allCarsList');
+            const broadcastInput = document.getElementById('broadcastInput');
+            const btnSendBroadcast = document.getElementById('btnSendBroadcast');
+
+            // Luisteren naar alle actieve auto's
+            db.ref('autos').on('value', (snapshot) => {
+                const cars = snapshot.val();
+                allCarsList.innerHTML = "";
+                if (cars) {
+                    Object.keys(cars).forEach(key => {
+                        const car = cars[key];
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${car.name}</strong>: ${car.status} <br><small>Laatste update: ${car.lastUpdate}</small>`;
+                        allCarsList.appendChild(li);
+                    });
+                } else {
+                    allCarsList.innerHTML = "<li>Geen actieve auto's online.</li>";
+                }
+            });
+
+            // Bericht sturen naar iedereen
+            btnSendBroadcast.addEventListener('click', () => {
+                const text = broadcastInput.value.trim();
+                if (!text) return;
+
+                db.ref('broadcast').set({
+                    text: text,
+                    time: new Date().toLocaleTimeString()
+                });
+                broadcastInput.value = "";
+                alert("Bericht verzonden naar alle auto's!");
+            });
+        }
+
+        // Inline Service Worker voor PWA
         if ('serviceWorker' in navigator) {
             const swCode = `
                 self.addEventListener('install', (e) => self.skipWaiting());
