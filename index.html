@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vervoer Logboek</title>
   
-  <link rel="manifest" href="./manifest.json">
+  <!-- PWA Links & Meta Tags -->
+  <link rel="manifest" href="https://luuk57.github.io/BigDataLuuk/manifest.json">
   <meta name="theme-color" content="#ff9800">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -120,6 +121,7 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxz7n6Hx3ptasr9YetgBnUp5UJVnK3IQCHvQbie1HFtcTZLW5nNbVryblppbx-yH19ipg/exec';
     let standaardRoutes = ["Huis ➔ Dialyse", "Dialyse ➔ Huis", "Privé"];
 
+    // Service Worker registreren voor PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -192,7 +194,7 @@
       }
     }
 
-    // Geolocatie ophalen
+    // Geolocatie ophalen (Straat + Huisnummer)
     function haalLocatieOp() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
@@ -227,12 +229,11 @@
       });
     }
 
-    // Verwerken van START, TUSSENSTOP, STOP met Visuele Kleurverandering
+    // Verwerken van START, TUSSENSTOP, STOP met Visuele Kleurverandering (Zonder Popup)
     async function verwerkRitActie(actieType, btnElement) {
       const knoppen = document.querySelectorAll('.btn-rit-actie');
       knoppen.forEach(b => b.disabled = true);
 
-      // 1. Bewaar originele knoptekst & verander kleur naar Blauw (Bezig)
       const origineleTekst = btnElement.innerHTML;
       btnElement.classList.add('btn-loading');
       btnElement.innerHTML = '⏳ Bezig met opslaan...';
@@ -255,12 +256,10 @@
         body: JSON.stringify(payload)
       })
       .then(() => {
-        // 2. Verander naar Groen (Opgeslagen)
         btnElement.classList.remove('btn-loading');
         btnElement.classList.add('btn-success');
         btnElement.innerHTML = '✔️ Opgeslagen!';
 
-        // 3. Reset na 1,5 seconde
         setTimeout(() => {
           btnElement.classList.remove('btn-success');
           btnElement.innerHTML = origineleTekst;
@@ -268,7 +267,6 @@
         }, 1500);
       })
       .catch(() => {
-        alert('Fout bij opslaan');
         btnElement.classList.remove('btn-loading');
         btnElement.innerHTML = origineleTekst;
         knoppen.forEach(b => b.disabled = false);
