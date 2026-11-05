@@ -36,12 +36,16 @@
 
     /* Grote Rit Knoppen */
     .rit-knoppen-box { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; margin-bottom: 20px; }
-    .btn-rit-actie { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
-    .btn-rit-actie:disabled { opacity: 0.6; }
+    .btn-rit-actie { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); transition: background-color 0.3s ease, transform 0.1s ease; }
+    .btn-rit-actie:disabled { opacity: 0.8; cursor: wait; }
     
     .btn-start { background-color: #28a745; }
     .btn-tussenstop { background-color: #ffc107; color: #212529; }
     .btn-stop { background-color: #dc3545; }
+
+    /* Statussen tijdens opslaan */
+    .btn-loading { background-color: #007bff !important; color: white !important; }
+    .btn-success { background-color: #155724 !important; color: white !important; }
 
     .table-responsive { overflow-x: auto; margin-top: 10px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 650px; }
@@ -81,9 +85,9 @@
 
     <!-- Grote Rit Knoppen -->
     <div class="rit-knoppen-box">
-      <button class="btn-rit-actie btn-start" onclick="verwerkRitActie('START')">🟢 START RIT</button>
-      <button class="btn-rit-actie btn-tussenstop" onclick="verwerkRitActie('TUSSENSTOP')">🟡 TUSSENSTOP</button>
-      <button class="btn-rit-actie btn-stop" onclick="verwerkRitActie('STOP')">🔴 STOP RIT</button>
+      <button id="btnStart" class="btn-rit-actie btn-start" onclick="verwerkRitActie('START', this)">🟢 START RIT</button>
+      <button id="btnTussenstop" class="btn-rit-actie btn-tussenstop" onclick="verwerkRitActie('TUSSENSTOP', this)">🟡 TUSSENSTOP</button>
+      <button id="btnStop" class="btn-rit-actie btn-stop" onclick="verwerkRitActie('STOP', this)">🔴 STOP RIT</button>
     </div>
 
   </div>
@@ -188,7 +192,7 @@
       }
     }
 
-    // Uitgebreide Geolocatie ophalen (met Straat + Huisnummer)
+    // Geolocatie ophalen
     function haalLocatieOp() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
@@ -223,10 +227,15 @@
       });
     }
 
-    // Verwerken van START, TUSSENSTOP, STOP
-    async function verwerkRitActie(actieType) {
+    // Verwerken van START, TUSSENSTOP, STOP met Visuele Kleurverandering
+    async function verwerkRitActie(actieType, btnElement) {
       const knoppen = document.querySelectorAll('.btn-rit-actie');
       knoppen.forEach(b => b.disabled = true);
+
+      // 1. Bewaar originele knoptekst & verander kleur naar Blauw (Bezig)
+      const origineleTekst = btnElement.innerHTML;
+      btnElement.classList.add('btn-loading');
+      btnElement.innerHTML = '⏳ Bezig met opslaan...';
 
       const locatieText = await haalLocatieOp();
       const routeVal = document.getElementById('gekozenRoute').value;
@@ -246,10 +255,22 @@
         body: JSON.stringify(payload)
       })
       .then(() => {
-        alert(`${actieType} vastgelegd!\nAdres: ${locatieText}`);
+        // 2. Verander naar Groen (Opgeslagen)
+        btnElement.classList.remove('btn-loading');
+        btnElement.classList.add('btn-success');
+        btnElement.innerHTML = '✔️ Opgeslagen!';
+
+        // 3. Reset na 1,5 seconde
+        setTimeout(() => {
+          btnElement.classList.remove('btn-success');
+          btnElement.innerHTML = origineleTekst;
+          knoppen.forEach(b => b.disabled = false);
+        }, 1500);
       })
-      .catch(() => alert('Fout bij opslaan'))
-      .finally(() => {
+      .catch(() => {
+        alert('Fout bij opslaan');
+        btnElement.classList.remove('btn-loading');
+        btnElement.innerHTML = origineleTekst;
         knoppen.forEach(b => b.disabled = false);
       });
     }
@@ -300,7 +321,6 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).then(() => {
-          alert('Rit verwijderd!');
           laadGegevens();
         });
       }
