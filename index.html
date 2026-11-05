@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vervoer Logboek</title>
+  
+  <!-- PWA Links -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#ff9800">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VervoerLog">
+  <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/taxi.png">
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 15px; background-color: #f4f6f8; color: #333; }
+    
+    /* Navigatie Tabs */
+    .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #e0e0e0; padding: 4px; border-radius: 10px; }
+    .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; font-weight: bold; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    .tab-btn.active { background: #ffffff; color: #ff9800; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    /* Inhoud per tab */
+    .tab-content { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .tab-content.active { display: block; }
+    
+    /* Formulieren & Labels */
+    h2 { margin-top: 0; color: #111; font-size: 20px; }
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
+    input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background-color: white; }
+    
+    /* Snelkeuze Knoppen Grid */
+    .snelkeuze-container { margin-top: 8px; }
+    .snelkeuze-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .btn-route { padding: 10px 14px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 8px; color: #e65100; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+    .btn-route.selected { background: #ff9800; color: white; border-color: #f57c00; }
+    .btn-route-del { color: #d32f2f; background: none; border: none; font-size: 14px; cursor: pointer; margin-left: 4px; font-weight: normal; }
+    
+    .btn-toevoegen { padding: 6px 12px; background: #e0e0e0; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+    
+    button.submit-btn { width: 100%; margin-top: 20px; padding: 14px; background: #ff9800; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button.submit-btn:disabled { background: #888; }
+
+    /* Tabel */
+    .table-responsive { overflow-x: auto; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 500px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+    th { background-color: #f8f9fa; font-size: 13px; color: #555; }
+    
+    .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
+    .btn-edit { background-color: #ffc107; color: #212529; }
+    .btn-delete { background-color: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+
+  <!-- Tab Knoppen -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('invoer')">🚗 Vervoer Invoeren</button>
+    <button class="tab-btn" onclick="openTab('historie')">📋 Rit Overzicht</button>
+  </div>
+
+  <!-- Tab 1: Vervoer Invoeren -->
+  <div id="tab-invoer" class="tab-content active">
+    <h2>Rit Loggen</h2>
+    <form id="formVervoer">
+      
+      <label>Snelkeuze Route / Bestemming</label>
+      <div class="snelkeuze-container">
+        <div id="snelkeuzeGrid" class="snelkeuze-grid"></div>
+        <button type="button" class="btn-toevoegen" onclick="voegRouteToe()">➕ Nieuwe Snelkeuze Route</button>
+      </div>
+      
+      <input type="text" id="routeInput" placeholder="Of typ hier handmatig een route..." required style="margin-top: 10px;">
+
+      <label>Type Vervoer</label>
+      <select id="typeVervoer" required>
+        <option value="Taxi / Zorgvervoer">Taxi / Zorgvervoer</option>
+        <option value="Eigen Auto">Eigen Auto</option>
+        <option value="Openbaar Vervoer">Openbaar Vervoer (Bus/Trein)</option>
+        <option value="Fiets / Lopen">Fiets / Lopen</option>
+        <option value="Overig">Overig</option>
+      </select>
+      
+      <label>Optionele Notitie</label>
+      <input type="text" id="notitie" placeholder="bijv. Vertraging, Chauffeur, Ritnummer">
+      
+      <button type="submit" class="submit-btn">Opslaan</button>
+    </form>
+  </div>
+
+  <!-- Tab 2: Historie -->
+  <div id="tab-historie" class="tab-content">
+    <h2>Gelogde Ritten</h2>
+    <button onclick="laadGegevens()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
+    
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Datum & Tijd</th>
+            <th>Route</th>
+            <th>Type</th>
+            <th>Notitie</th>
+            <th>Acties</th>
+          </tr>
+        </thead>
+        <tbody id="historieTabel">
+          <tr><td colspan="5">Gegevens laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxz7n6Hx3ptasr9YetgBnUp5UJVnK3IQCHvQbie1HFtcTZLW5nNbVryblppbx-yH19ipg/exec';
+    
+    // Standaard routes
+    let standaardRoutes = ["Huis ➔ Dialyse", "Dialyse ➔ Huis", "Privé"];
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      laadSnelkeuzes();
+    });
+
+    function openTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById('tab-' + tabName).classList.add('active');
+      event.currentTarget.classList.add('active');
+
+      if (tabName === 'historie') {
+        laadGegevens();
+      }
+    }
+
+    // Snelkeuzes beheren via LocalStorage
+    function laadSnelkeuzes() {
+      const opslag = localStorage.getItem('mijn_vervoer_routes');
+      let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
+      
+      const grid = document.getElementById('snelkeuzeGrid');
+      grid.innerHTML = '';
+      
+      routes.forEach((route, index) => {
+        grid.innerHTML += `
+          <div class="btn-route" onclick="selecteerRoute('${route}', this)">
+            <span>📍 ${route}</span>
+            <button type="button" class="btn-route-del" onclick="event.stopPropagation(); verwijderRoute(${index})">✕</button>
+          </div>
+        `;
+      });
+    }
+
+    function selecteerRoute(route, btnEl) {
+      document.getElementById('routeInput').value = route;
+      document.querySelectorAll('.btn-route').forEach(el => el.classList.remove('selected'));
+      btnEl.classList.add('selected');
+    }
+
+    function voegRouteToe() {
+      const nieuweRoute = prompt("Voer de naam van de nieuwe route in (bijv. Huis ➔ Ziekenhuis):");
+      if (nieuweRoute && nieuweRoute.trim() !== "") {
+        const opslag = localStorage.getItem('mijn_vervoer_routes');
+        let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
+        routes.push(nieuweRoute.trim());
+        localStorage.setItem('mijn_vervoer_routes', JSON.stringify(routes));
+        laadSnelkeuzes();
+      }
+    }
+
+    function verwijderRoute(index) {
+      if (confirm("Wil je deze snelkeuze route verwijderen?")) {
+        const opslag = localStorage.getItem('mijn_vervoer_routes');
+        let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
+        routes.splice(index, 1);
+        localStorage.setItem('mijn_vervoer_routes', JSON.stringify(routes));
+        laadSnelkeuzes();
+      }
+    }
+
+    // Vervoer verzenden
+    document.getElementById('formVervoer').addEventListener('submit', e => {
+      e.preventDefault();
+      
+      const payload = {
+        actie: 'CREATE',
+        route: document.getElementById('routeInput').value,
+        typeVervoer: document.getElementById('typeVervoer').value,
+        notitie: document.getElementById('notitie').value
+      };
+
+      const btn = document.querySelector('#formVervoer .submit-btn');
+      btn.disabled = true;
+      btn.innerText = 'Opslaan...';
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        alert('Rit succesvol opgeslagen!');
+        document.getElementById('formVervoer').reset();
+        document.querySelectorAll('.btn-route').forEach(el => el.classList.remove('selected'));
+      })
+      .catch(err => alert('Fout bij opslaan'))
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Opslaan';
+      });
+    });
+
+    // Gegevens Ophalen
+    function laadGegevens() {
+      const tbody = document.getElementById('historieTabel');
+      tbody.innerHTML = '<tr><td colspan="5">Laden...</td></tr>';
+
+      fetch(SCRIPT_URL)
+      .then(res => res.json())
+      .then(data => {
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5">Nog geen ritten gelogd.</td></tr>';
+          return;
+        }
+
+        data.reverse().forEach(row => {
+          let schoneDatum = row.datum || '';
+          let schoneTijd = row.tijd || '';
+
+          if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
+          if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+          schoneDatum = schoneDatum.replace(/'/g, '').trim();
+          schoneTijd = schoneTijd.replace(/'/g, '').trim();
+
+          tbody.innerHTML += `
+            <tr>
+              <td><small style="color: #666;">${schoneDatum}</small><br><b>${schoneTijd}</b></td>
+              <td><b>${row.route}</b></td>
+              <td>${row.typeVervoer}</td>
+              <td>${row.notitie || '-'}</td>
+              <td style="white-space: nowrap;">
+                <button class="btn-actie btn-edit" onclick="bewerkRegel(${row.rowIndex}, '${row.route}', '${row.typeVervoer}', '${row.notitie}')">✏️</button>
+                <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
+              </td>
+            </tr>
+          `;
+        });
+      })
+      .catch(err => {
+        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht. Controleer de Google Script rechten.</td></tr>';
+      });
+    }
+
+    function bewerkRegel(rowIndex, oudeRoute, oudType, oudeNotitie) {
+      const nieuwRoute = prompt("Route / Bestemming:", oudeRoute);
+      if (nieuwRoute === null) return;
+
+      const nieuwType = prompt("Type Vervoer (Taxi / Zorgvervoer, Eigen Auto, Openbaar Vervoer, Fiets / Lopen, Overig):", oudType);
+      if (nieuwType === null) return;
+
+      const nieuwNotitie = prompt("Notitie:", oudeNotitie);
+      if (nieuwNotitie === null) return;
+
+      const payload = { actie: 'EDIT', rowIndex: rowIndex, route: nieuwRoute, typeVervoer: nieuwType, notitie: nieuwNotitie };
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        alert('Rit bijgewerkt!');
+        laadGegevens();
+      });
+    }
+
+    function verwijderRegel(rowIndex) {
+      if (confirm("Weet je zeker dat je deze rit wilt verwijderen?")) {
+        const payload = { actie: 'DELETE', rowIndex: rowIndex };
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(() => {
+          alert('Rit verwijderd!');
+          laadGegevens();
+        });
+      }
+    }
+  </script>
+</body>
+</html>
