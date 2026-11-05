@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vervoer Logboek</title>
   
-  <!-- PWA Links -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#ff9800">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,17 +16,14 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 15px; background-color: #f4f6f8; color: #333; }
     
-    /* Navigatie Tabs */
     .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #e0e0e0; padding: 4px; border-radius: 10px; }
     .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; font-weight: bold; border-radius: 8px; font-size: 15px; cursor: pointer; }
     .tab-btn.active { background: #ffffff; color: #ff9800; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     
-    /* Inhoud per tab */
     .tab-content { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .tab-content.active { display: block; }
     
-    /* Grote Rit Knoppen (Start, Tussenstop, Stop) */
-    .rit-knoppen-box { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .rit-knoppen-box { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
     .btn-rit-actie { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
     .btn-rit-actie:disabled { opacity: 0.6; }
     
@@ -35,27 +31,12 @@
     .btn-tussenstop { background-color: #ffc107; color: #212529; }
     .btn-stop { background-color: #dc3545; }
 
-    /* Formulieren & Labels */
-    h2 { margin-top: 0; color: #111; font-size: 20px; }
     label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
     input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background-color: white; }
-    
-    /* Snelkeuze Knoppen Grid */
-    .snelkeuze-container { margin-top: 8px; }
-    .snelkeuze-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-    .btn-route { padding: 10px 14px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 8px; color: #e65100; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-    .btn-route.selected { background: #ff9800; color: white; border-color: #f57c00; }
-    .btn-route-del { color: #d32f2f; background: none; border: none; font-size: 14px; cursor: pointer; margin-left: 4px; font-weight: normal; }
-    
-    .btn-toevoegen { padding: 6px 12px; background: #e0e0e0; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
-    
-    button.submit-btn { width: 100%; margin-top: 20px; padding: 14px; background: #ff9800; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    button.submit-btn:disabled { background: #888; }
 
-    /* Tabel */
     .table-responsive { overflow-x: auto; margin-top: 10px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 500px; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 650px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
     th { background-color: #f8f9fa; font-size: 13px; color: #555; }
     
     .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
@@ -74,6 +55,14 @@
   <!-- Tab 1: Vervoer Invoeren -->
   <div id="tab-invoer" class="tab-content active">
     
+    <label>Type Vervoer voor deze rit:</label>
+    <select id="typeVervoer" style="margin-bottom: 15px;">
+      <option value="Taxi / Zorgvervoer">Taxi / Zorgvervoer</option>
+      <option value="Eigen Auto">Eigen Auto</option>
+      <option value="Openbaar Vervoer">Openbaar Vervoer (Bus/Trein)</option>
+      <option value="Overig">Overig</option>
+    </select>
+
     <!-- Grote Rit Knoppen -->
     <div class="rit-knoppen-box">
       <button class="btn-rit-actie btn-start" onclick="verwerkRitActie('START')">🟢 START RIT</button>
@@ -81,52 +70,27 @@
       <button class="btn-rit-actie btn-stop" onclick="verwerkRitActie('STOP')">🔴 STOP RIT</button>
     </div>
 
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-
-    <h2>Handmatige Invoer</h2>
-    <form id="formVervoer">
-      <label>Snelkeuze Route / Bestemming</label>
-      <div class="snelkeuze-container">
-        <div id="snelkeuzeGrid" class="snelkeuze-grid"></div>
-        <button type="button" class="btn-toevoegen" onclick="voegRouteToe()">➕ Nieuwe Snelkeuze Route</button>
-      </div>
-      
-      <input type="text" id="routeInput" placeholder="Of typ hier handmatig een route..." required style="margin-top: 10px;">
-
-      <label>Type Vervoer</label>
-      <select id="typeVervoer" required>
-        <option value="Taxi / Zorgvervoer">Taxi / Zorgvervoer</option>
-        <option value="Eigen Auto">Eigen Auto</option>
-        <option value="Openbaar Vervoer">Openbaar Vervoer (Bus/Trein)</option>
-        <option value="Fiets / Lopen">Fiets / Lopen</option>
-        <option value="Overig">Overig</option>
-      </select>
-      
-      <label>Optionele Notitie</label>
-      <input type="text" id="notitie" placeholder="bijv. Vertraging, Chauffeur, Ritnummer">
-      
-      <button type="submit" class="submit-btn">Opslaan</button>
-    </form>
   </div>
 
   <!-- Tab 2: Historie -->
   <div id="tab-historie" class="tab-content">
-    <h2>Gelogde Ritten</h2>
+    <h2>Gelogde Ritten (Per Regel)</h2>
     <button onclick="laadGegevens()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
     
     <div class="table-responsive">
       <table>
         <thead>
           <tr>
-            <th>Datum & Tijd</th>
-            <th>Route / Gebeurtenis</th>
-            <th>Type</th>
-            <th>Notitie</th>
+            <th>Datum</th>
+            <th>Start</th>
+            <th>Tussenstop(s)</th>
+            <th>Stop</th>
+            <th>Vervoer</th>
             <th>Acties</th>
           </tr>
         </thead>
         <tbody id="historieTabel">
-          <tr><td colspan="5">Gegevens laden...</td></tr>
+          <tr><td colspan="6">Gegevens laden...</td></tr>
         </tbody>
       </table>
     </div>
@@ -134,17 +98,12 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxz7n6Hx3ptasr9YetgBnUp5UJVnK3IQCHvQbie1HFtcTZLW5nNbVryblppbx-yH19ipg/exec';
-    let standaardRoutes = ["Huis ➔ Dialyse", "Dialyse ➔ Huis", "Privé"];
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      laadSnelkeuzes();
-    });
 
     function openTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -158,7 +117,7 @@
       }
     }
 
-    // Automatische Locatie Bepalen via GPS
+    // Geolocatie ophalen
     function haalLocatieOp() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
@@ -171,7 +130,6 @@
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             try {
-              // OpenStreetMap Omgekeerd Geocoden om straatnaam te vinden
               const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
               const data = await res.json();
               if (data && data.address) {
@@ -197,13 +155,12 @@
       knoppen.forEach(b => b.disabled = true);
 
       const locatieText = await haalLocatieOp();
-      const typeVervoerVal = document.getElementById('typeVervoer').value || "Taxi / Zorgvervoer";
+      const typeVervoerVal = document.getElementById('typeVervoer').value;
 
       const payload = {
         actie: actieType,
         locatie: locatieText,
-        typeVervoer: typeVervoerVal,
-        notitie: ""
+        typeVervoer: typeVervoerVal
       };
 
       fetch(SCRIPT_URL, {
@@ -213,7 +170,7 @@
         body: JSON.stringify(payload)
       })
       .then(() => {
-        alert(`${actieType} geregistreerd met locatie: ${locatieText}`);
+        alert(`${actieType} vastgelegd op regel!`);
       })
       .catch(() => alert('Fout bij opslaan'))
       .finally(() => {
@@ -221,116 +178,32 @@
       });
     }
 
-    // Snelkeuzes beheren
-    function laadSnelkeuzes() {
-      const opslag = localStorage.getItem('mijn_vervoer_routes');
-      let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
-      
-      const grid = document.getElementById('snelkeuzeGrid');
-      grid.innerHTML = '';
-      
-      routes.forEach((route, index) => {
-        grid.innerHTML += `
-          <div class="btn-route" onclick="selecteerRoute('${route}', this)">
-            <span>📍 ${route}</span>
-            <button type="button" class="btn-route-del" onclick="event.stopPropagation(); verwijderRoute(${index})">✕</button>
-          </div>
-        `;
-      });
-    }
-
-    function selecteerRoute(route, btnEl) {
-      document.getElementById('routeInput').value = route;
-      document.querySelectorAll('.btn-route').forEach(el => el.classList.remove('selected'));
-      btnEl.classList.add('selected');
-    }
-
-    function voegRouteToe() {
-      const nieuweRoute = prompt("Voer de naam van de nieuwe route in:");
-      if (nieuweRoute && nieuweRoute.trim() !== "") {
-        const opslag = localStorage.getItem('mijn_vervoer_routes');
-        let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
-        routes.push(nieuweRoute.trim());
-        localStorage.setItem('mijn_vervoer_routes', JSON.stringify(routes));
-        laadSnelkeuzes();
-      }
-    }
-
-    function verwijderRoute(index) {
-      if (confirm("Wil je deze snelkeuze route verwijderen?")) {
-        const opslag = localStorage.getItem('mijn_vervoer_routes');
-        let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
-        routes.splice(index, 1);
-        localStorage.setItem('mijn_vervoer_routes', JSON.stringify(routes));
-        laadSnelkeuzes();
-      }
-    }
-
-    // Handmatige invoer verzenden
-    document.getElementById('formVervoer').addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const payload = {
-        actie: 'CREATE',
-        route: document.getElementById('routeInput').value,
-        typeVervoer: document.getElementById('typeVervoer').value,
-        notitie: document.getElementById('notitie').value
-      };
-
-      const btn = document.querySelector('#formVervoer .submit-btn');
-      btn.disabled = true;
-      btn.innerText = 'Opslaan...';
-
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(() => {
-        alert('Rit succesvol opgeslagen!');
-        document.getElementById('formVervoer').reset();
-        document.querySelectorAll('.btn-route').forEach(el => el.classList.remove('selected'));
-      })
-      .catch(err => alert('Fout bij opslaan'))
-      .finally(() => {
-        btn.disabled = false;
-        btn.innerText = 'Opslaan';
-      });
-    });
-
     // Gegevens Ophalen
     function laadGegevens() {
       const tbody = document.getElementById('historieTabel');
-      tbody.innerHTML = '<tr><td colspan="5">Laden...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6">Laden...</td></tr>';
 
       fetch(SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5">Nog geen ritten gelogd.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6">Nog geen ritten gelogd.</td></tr>';
           return;
         }
 
         data.reverse().forEach(row => {
-          let schoneDatum = row.datum || '';
-          let schoneTijd = row.tijd || '';
-
-          if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
-          if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-
-          schoneDatum = schoneDatum.replace(/'/g, '').trim();
-          schoneTijd = schoneTijd.replace(/'/g, '').trim();
+          let schoneDatum = (row.datum || '').replace(/'/g, '').trim();
+          let tussenstopsFormatted = (row.tussenstops || '-').replace(/\n/g, '<br>');
 
           tbody.innerHTML += `
             <tr>
-              <td><small style="color: #666;">${schoneDatum}</small><br><b>${schoneTijd}</b></td>
-              <td><b>${row.route}</b></td>
+              <td><b>${schoneDatum}</b></td>
+              <td><b>${row.startTijd || '-'}</b><br><small style="color:#666;">${row.startLocatie || '-'}</small></td>
+              <td><small>${tussenstopsFormatted}</small></td>
+              <td><b>${row.stopTijd || 'Bezig...'}</b><br><small style="color:#666;">${row.stopLocatie || ''}</small></td>
               <td>${row.typeVervoer}</td>
-              <td>${row.notitie || '-'}</td>
               <td style="white-space: nowrap;">
-                <button class="btn-actie btn-edit" onclick="bewerkRegel(${row.rowIndex}, '${row.route}', '${row.typeVervoer}', '${row.notitie}')">✏️</button>
                 <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
               </td>
             </tr>
@@ -338,30 +211,7 @@
         });
       })
       .catch(err => {
-        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht.</td></tr>';
-      });
-    }
-
-    function bewerkRegel(rowIndex, oudeRoute, oudType, oudeNotitie) {
-      const nieuwRoute = prompt("Route / Gebeurtenis:", oudeRoute);
-      if (nieuwRoute === null) return;
-
-      const nieuwType = prompt("Type Vervoer:", oudType);
-      if (nieuwType === null) return;
-
-      const nieuwNotitie = prompt("Notitie:", oudeNotitie);
-      if (nieuwNotitie === null) return;
-
-      const payload = { actie: 'EDIT', rowIndex: rowIndex, route: nieuwRoute, typeVervoer: nieuwType, notitie: nieuwNotitie };
-
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(() => {
-        alert('Rit bijgewerkt!');
-        laadGegevens();
+        tbody.innerHTML = '<tr><td colspan="6">Fout bij laden overzicht.</td></tr>';
       });
     }
 
