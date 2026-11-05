@@ -23,7 +23,19 @@
     .tab-content { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .tab-content.active { display: block; }
     
-    .rit-knoppen-box { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
+    input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background-color: white; }
+
+    /* Snelkeuze Knoppen Grid */
+    .snelkeuze-container { margin-top: 8px; margin-bottom: 15px; }
+    .snelkeuze-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .btn-route { padding: 10px 14px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 8px; color: #e65100; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+    .btn-route.selected { background: #ff9800; color: white; border-color: #f57c00; }
+    .btn-route-del { color: #d32f2f; background: none; border: none; font-size: 14px; cursor: pointer; margin-left: 4px; font-weight: normal; }
+    .btn-toevoegen { padding: 6px 12px; background: #e0e0e0; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+
+    /* Grote Rit Knoppen */
+    .rit-knoppen-box { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; margin-bottom: 20px; }
     .btn-rit-actie { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
     .btn-rit-actie:disabled { opacity: 0.6; }
     
@@ -31,16 +43,12 @@
     .btn-tussenstop { background-color: #ffc107; color: #212529; }
     .btn-stop { background-color: #dc3545; }
 
-    label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
-    input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background-color: white; }
-
     .table-responsive { overflow-x: auto; margin-top: 10px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 650px; }
     th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
     th { background-color: #f8f9fa; font-size: 13px; color: #555; }
     
     .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
-    .btn-edit { background-color: #ffc107; color: #212529; }
     .btn-delete { background-color: #dc3545; color: white; }
   </style>
 </head>
@@ -55,7 +63,15 @@
   <!-- Tab 1: Vervoer Invoeren -->
   <div id="tab-invoer" class="tab-content active">
     
-    <label>Type Vervoer voor deze rit:</label>
+    <label>Selecteer Snelkeuze Route (Optioneel):</label>
+    <div class="snelkeuze-container">
+      <div id="snelkeuzeGrid" class="snelkeuze-grid"></div>
+      <button type="button" class="btn-toevoegen" onclick="voegRouteToe()">➕ Nieuwe Snelkeuze Route</button>
+    </div>
+    
+    <input type="hidden" id="gekozenRoute" value="">
+
+    <label>Type Vervoer:</label>
     <select id="typeVervoer" style="margin-bottom: 15px;">
       <option value="Taxi / Zorgvervoer">Taxi / Zorgvervoer</option>
       <option value="Eigen Auto">Eigen Auto</option>
@@ -74,7 +90,7 @@
 
   <!-- Tab 2: Historie -->
   <div id="tab-historie" class="tab-content">
-    <h2>Gelogde Ritten (Per Regel)</h2>
+    <h2>Gelogde Ritten</h2>
     <button onclick="laadGegevens()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
     
     <div class="table-responsive">
@@ -82,9 +98,9 @@
         <thead>
           <tr>
             <th>Datum</th>
-            <th>Start</th>
+            <th>Start (Tijd & Adres)</th>
             <th>Tussenstop(s)</th>
-            <th>Stop</th>
+            <th>Stop (Tijd & Adres)</th>
             <th>Vervoer</th>
             <th>Acties</th>
           </tr>
@@ -98,12 +114,17 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxz7n6Hx3ptasr9YetgBnUp5UJVnK3IQCHvQbie1HFtcTZLW5nNbVryblppbx-yH19ipg/exec';
+    let standaardRoutes = ["Huis ➔ Dialyse", "Dialyse ➔ Huis", "Privé"];
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      laadSnelkeuzes();
+    });
 
     function openTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -117,7 +138,57 @@
       }
     }
 
-    // Geolocatie ophalen
+    // Snelkeuzes beheren
+    function laadSnelkeuzes() {
+      const opslag = localStorage.getItem('mijn_vervoer_routes');
+      let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
+      
+      const grid = document.getElementById('snelkeuzeGrid');
+      grid.innerHTML = '';
+      
+      routes.forEach((route, index) => {
+        grid.innerHTML += `
+          <div class="btn-route" onclick="selecteerRoute('${route}', this)">
+            <span>📍 ${route}</span>
+            <button type="button" class="btn-route-del" onclick="event.stopPropagation(); verwijderRoute(${index})">✕</button>
+          </div>
+        `;
+      });
+    }
+
+    function selecteerRoute(route, btnEl) {
+      if (btnEl.classList.contains('selected')) {
+        btnEl.classList.remove('selected');
+        document.getElementById('gekozenRoute').value = "";
+      } else {
+        document.querySelectorAll('.btn-route').forEach(el => el.classList.remove('selected'));
+        btnEl.classList.add('selected');
+        document.getElementById('gekozenRoute').value = route;
+      }
+    }
+
+    function voegRouteToe() {
+      const nieuweRoute = prompt("Voer de naam van de nieuwe route in:");
+      if (nieuweRoute && nieuweRoute.trim() !== "") {
+        const opslag = localStorage.getItem('mijn_vervoer_routes');
+        let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
+        routes.push(nieuweRoute.trim());
+        localStorage.setItem('mijn_vervoer_routes', JSON.stringify(routes));
+        laadSnelkeuzes();
+      }
+    }
+
+    function verwijderRoute(index) {
+      if (confirm("Wil je deze snelkeuze route verwijderen?")) {
+        const opslag = localStorage.getItem('mijn_vervoer_routes');
+        let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
+        routes.splice(index, 1);
+        localStorage.setItem('mijn_vervoer_routes', JSON.stringify(routes));
+        laadSnelkeuzes();
+      }
+    }
+
+    // Uitgebreide Geolocatie ophalen (met Straat + Huisnummer)
     function haalLocatieOp() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
@@ -130,12 +201,15 @@
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             try {
-              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
               const data = await res.json();
               if (data && data.address) {
                 const weg = data.address.road || data.address.pedestrian || "";
+                const huisnummer = data.address.house_number ? (" " + data.address.house_number) : "";
                 const plaats = data.address.town || data.address.city || data.address.village || "";
-                resolve(`${weg} ${plaats}`.trim() || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+                
+                const volAdres = `${weg}${huisnummer}, ${plaats}`.trim();
+                resolve(volAdres || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
               } else {
                 resolve(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
               }
@@ -144,7 +218,7 @@
             }
           },
           () => resolve("Locatie niet toegestaan/gevonden"),
-          { timeout: 6000 }
+          { enableHighAccuracy: true, timeout: 7000 }
         );
       });
     }
@@ -155,10 +229,12 @@
       knoppen.forEach(b => b.disabled = true);
 
       const locatieText = await haalLocatieOp();
+      const routeVal = document.getElementById('gekozenRoute').value;
       const typeVervoerVal = document.getElementById('typeVervoer').value;
 
       const payload = {
         actie: actieType,
+        route: routeVal,
         locatie: locatieText,
         typeVervoer: typeVervoerVal
       };
@@ -170,7 +246,7 @@
         body: JSON.stringify(payload)
       })
       .then(() => {
-        alert(`${actieType} vastgelegd op regel!`);
+        alert(`${actieType} vastgelegd!\nAdres: ${locatieText}`);
       })
       .catch(() => alert('Fout bij opslaan'))
       .finally(() => {
