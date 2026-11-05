@@ -26,6 +26,15 @@
     .tab-content { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .tab-content.active { display: block; }
     
+    /* Grote Rit Knoppen (Start, Tussenstop, Stop) */
+    .rit-knoppen-box { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .btn-rit-actie { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+    .btn-rit-actie:disabled { opacity: 0.6; }
+    
+    .btn-start { background-color: #28a745; }
+    .btn-tussenstop { background-color: #ffc107; color: #212529; }
+    .btn-stop { background-color: #dc3545; }
+
     /* Formulieren & Labels */
     h2 { margin-top: 0; color: #111; font-size: 20px; }
     label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
@@ -64,9 +73,18 @@
 
   <!-- Tab 1: Vervoer Invoeren -->
   <div id="tab-invoer" class="tab-content active">
-    <h2>Rit Loggen</h2>
+    
+    <!-- Grote Rit Knoppen -->
+    <div class="rit-knoppen-box">
+      <button class="btn-rit-actie btn-start" onclick="verwerkRitActie('START')">🟢 START RIT</button>
+      <button class="btn-rit-actie btn-tussenstop" onclick="verwerkRitActie('TUSSENSTOP')">🟡 TUSSENSTOP</button>
+      <button class="btn-rit-actie btn-stop" onclick="verwerkRitActie('STOP')">🔴 STOP RIT</button>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+    <h2>Handmatige Invoer</h2>
     <form id="formVervoer">
-      
       <label>Snelkeuze Route / Bestemming</label>
       <div class="snelkeuze-container">
         <div id="snelkeuzeGrid" class="snelkeuze-grid"></div>
@@ -101,7 +119,7 @@
         <thead>
           <tr>
             <th>Datum & Tijd</th>
-            <th>Route</th>
+            <th>Route / Gebeurtenis</th>
             <th>Type</th>
             <th>Notitie</th>
             <th>Acties</th>
@@ -116,8 +134,6 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxz7n6Hx3ptasr9YetgBnUp5UJVnK3IQCHvQbie1HFtcTZLW5nNbVryblppbx-yH19ipg/exec';
-    
-    // Standaard routes
     let standaardRoutes = ["Huis ➔ Dialyse", "Dialyse ➔ Huis", "Privé"];
 
     if ('serviceWorker' in navigator) {
@@ -142,7 +158,70 @@
       }
     }
 
-    // Snelkeuzes beheren via LocalStorage
+    // Automatische Locatie Bepalen via GPS
+    function haalLocatieOp() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve("GPS niet ondersteund");
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            try {
+              // OpenStreetMap Omgekeerd Geocoden om straatnaam te vinden
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+              const data = await res.json();
+              if (data && data.address) {
+                const weg = data.address.road || data.address.pedestrian || "";
+                const plaats = data.address.town || data.address.city || data.address.village || "";
+                resolve(`${weg} ${plaats}`.trim() || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+              } else {
+                resolve(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+              }
+            } catch (e) {
+              resolve(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+            }
+          },
+          () => resolve("Locatie niet toegestaan/gevonden"),
+          { timeout: 6000 }
+        );
+      });
+    }
+
+    // Verwerken van START, TUSSENSTOP, STOP
+    async function verwerkRitActie(actieType) {
+      const knoppen = document.querySelectorAll('.btn-rit-actie');
+      knoppen.forEach(b => b.disabled = true);
+
+      const locatieText = await haalLocatieOp();
+      const typeVervoerVal = document.getElementById('typeVervoer').value || "Taxi / Zorgvervoer";
+
+      const payload = {
+        actie: actieType,
+        locatie: locatieText,
+        typeVervoer: typeVervoerVal,
+        notitie: ""
+      };
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        alert(`${actieType} geregistreerd met locatie: ${locatieText}`);
+      })
+      .catch(() => alert('Fout bij opslaan'))
+      .finally(() => {
+        knoppen.forEach(b => b.disabled = false);
+      });
+    }
+
+    // Snelkeuzes beheren
     function laadSnelkeuzes() {
       const opslag = localStorage.getItem('mijn_vervoer_routes');
       let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
@@ -167,7 +246,7 @@
     }
 
     function voegRouteToe() {
-      const nieuweRoute = prompt("Voer de naam van de nieuwe route in (bijv. Huis ➔ Ziekenhuis):");
+      const nieuweRoute = prompt("Voer de naam van de nieuwe route in:");
       if (nieuweRoute && nieuweRoute.trim() !== "") {
         const opslag = localStorage.getItem('mijn_vervoer_routes');
         let routes = opslag ? JSON.parse(opslag) : standaardRoutes;
@@ -187,7 +266,7 @@
       }
     }
 
-    // Vervoer verzenden
+    // Handmatige invoer verzenden
     document.getElementById('formVervoer').addEventListener('submit', e => {
       e.preventDefault();
       
@@ -259,15 +338,15 @@
         });
       })
       .catch(err => {
-        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht. Controleer de Google Script rechten.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht.</td></tr>';
       });
     }
 
     function bewerkRegel(rowIndex, oudeRoute, oudType, oudeNotitie) {
-      const nieuwRoute = prompt("Route / Bestemming:", oudeRoute);
+      const nieuwRoute = prompt("Route / Gebeurtenis:", oudeRoute);
       if (nieuwRoute === null) return;
 
-      const nieuwType = prompt("Type Vervoer (Taxi / Zorgvervoer, Eigen Auto, Openbaar Vervoer, Fiets / Lopen, Overig):", oudType);
+      const nieuwType = prompt("Type Vervoer:", oudType);
       if (nieuwType === null) return;
 
       const nieuwNotitie = prompt("Notitie:", oudeNotitie);
