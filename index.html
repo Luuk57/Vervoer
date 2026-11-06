@@ -6,7 +6,7 @@
   <title>Vervoer Logboek</title>
   
   <!-- PWA Links & Meta Tags -->
-  <<link rel="manifest" href="https://luuk57.github.io/Vervoer/manifest.json">
+  <link rel="manifest" href="https://luuk57.github.io/Vervoer/manifest.json">
 
   <meta name="theme-color" content="#ff9800">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -56,6 +56,10 @@
     
     .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
     .btn-delete { background-color: #dc3545; color: white; }
+
+    /* Stijling voor de Kaart Links */
+    .map-link { color: #007bff; text-decoration: underline; font-weight: bold; cursor: pointer; word-break: break-word; }
+    .map-link:hover { color: #0056b3; }
   </style>
 </head>
 <body>
@@ -195,11 +199,11 @@
       }
     }
 
-    // Geolocatie ophalen (Straat + Huisnummer)
+    // Geolocatie ophalen (Straat + Huisnummer & Coördinaten)
     function haalLocatieOp() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
-          resolve("GPS niet ondersteund");
+          resolve({ tekst: "GPS niet ondersteund", coords: null });
           return;
         }
 
@@ -207,6 +211,8 @@
           async (pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
+            const coordsStr = `${lat},${lon}`;
+            
             try {
               const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
               const data = await res.json();
@@ -216,21 +222,21 @@
                 const plaats = data.address.town || data.address.city || data.address.village || "";
                 
                 const volAdres = `${weg}${huisnummer}, ${plaats}`.trim();
-                resolve(volAdres || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+                resolve({ tekst: volAdres || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
               } else {
-                resolve(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+                resolve({ tekst: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
               }
             } catch (e) {
-              resolve(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+              resolve({ tekst: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
             }
           },
-          () => resolve("Locatie niet toegestaan/gevonden"),
+          () => resolve({ tekst: "Locatie niet toegestaan/gevonden", coords: null }),
           { enableHighAccuracy: true, timeout: 7000 }
         );
       });
     }
 
-    // Verwerken van START, TUSSENSTOP, STOP met Visuele Kleurverandering (Zonder Popup)
+    // Verwerken van START, TUSSENSTOP, STOP
     async function verwerkRitActie(actieType, btnElement) {
       const knoppen = document.querySelectorAll('.btn-rit-actie');
       knoppen.forEach(b => b.disabled = true);
@@ -239,14 +245,15 @@
       btnElement.classList.add('btn-loading');
       btnElement.innerHTML = '⏳ Bezig met opslaan...';
 
-      const locatieText = await haalLocatieOp();
+      const locObj = await haalLocatieOp();
       const routeVal = document.getElementById('gekozenRoute').value;
       const typeVervoerVal = document.getElementById('typeVervoer').value;
 
       const payload = {
         actie: actieType,
         route: routeVal,
-        locatie: locatieText,
+        locatie: locObj.tekst,
+        coords: locObj.coords,
         typeVervoer: typeVervoerVal
       };
 
@@ -274,7 +281,21 @@
       });
     }
 
-    // Gegevens Ophalen
+    // Hulpmiddel om locatietekst naar een Google Maps Link om te zetten
+    function formatteerLocatieLink(locatieTekst) {
+      if (!locatieTekst || locatieTekst === '-' || locatieTekst.trim() === '') return '-';
+
+      // Als de tekst al een URL bevat
+      if (locatieTekst.includes('http://') || locatieTekst.includes('https://')) {
+        return `<a class="map-link" href="${locatieTekst}" target="_blank">🗺️ Bekijk op kaart</a>`;
+      }
+
+      // Maak een Google Maps zoek-URL van het adres/coördinaten
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locatieTekst)}`;
+      return `<a class="map-link" href="${mapsUrl}" target="_blank">🗺️ ${locatieTekst}</a>`;
+    }
+
+    // Gegevens Ophalen en Weergeven
     function laadGegevens() {
       const tbody = document.getElementById('historieTabel');
       tbody.innerHTML = '<tr><td colspan="6">Laden...</td></tr>';
@@ -290,14 +311,25 @@
 
         data.reverse().forEach(row => {
           let schoneDatum = (row.datum || '').replace(/'/g, '').trim();
-          let tussenstopsFormatted = (row.tussenstops || '-').replace(/\n/g, '<br>');
+
+          // Formatteer tussenstops met links per regel
+          let tussenstopsFormatted = '-';
+          if (row.tussenstops && row.tussenstops !== '-') {
+            tussenstopsFormatted = row.tussenstops.split('\n').map(regel => {
+              if (!regel.trim()) return '';
+              return formatteerLocatieLink(regel.trim());
+            }).join('<br>');
+          }
+
+          let startLoc = formatteerLocatieLink(row.startLocatie);
+          let stopLoc = row.stopLocatie ? formatteerLocatieLink(row.stopLocatie) : '';
 
           tbody.innerHTML += `
             <tr>
               <td><b>${schoneDatum}</b></td>
-              <td><b>${row.startTijd || '-'}</b><br><small style="color:#666;">${row.startLocatie || '-'}</small></td>
+              <td><b>${row.startTijd || '-'}</b><br><small>${startLoc}</small></td>
               <td><small>${tussenstopsFormatted}</small></td>
-              <td><b>${row.stopTijd || 'Bezig...'}</b><br><small style="color:#666;">${row.stopLocatie || ''}</small></td>
+              <td><b>${row.stopTijd || 'Bezig...'}</b><br><small>${stopLoc}</small></td>
               <td>${row.typeVervoer}</td>
               <td style="white-space: nowrap;">
                 <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
