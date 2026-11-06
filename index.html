@@ -57,7 +57,7 @@
     .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
     .btn-delete { background-color: #dc3545; color: white; }
 
-    /* Stijling voor de Kaart Links */
+    /* Stijling voor Kaart Links */
     .map-link {
       display: inline-flex;
       align-items: center;
@@ -257,7 +257,6 @@
       const routeVal = document.getElementById('gekozenRoute').value;
       const typeVervoerVal = document.getElementById('typeVervoer').value;
 
-      // Als er coördinaten zijn, sturen we die door zodat Google Apps Script de exacte link kan opslaan
       const payload = {
         actie: actieType,
         route: routeVal,
@@ -290,16 +289,29 @@
       });
     }
 
-    // Functie die elke locatietekst/coördinaat omzet naar een aanklikbare Google Maps link
+    // Helper om tijd op te schonen (haalt HH:mm uit lange ISO datums)
+    function opschonenTijd(tijdVal) {
+      if (!tijdVal || tijdVal === '-') return '-';
+      let str = String(tijdVal).trim();
+      
+      // Als de tijd een ISO datum bevat zoals 1899-12-30T19:04:00.000Z
+      if (str.includes('T')) {
+        let tijdDeel = str.split('T')[1];
+        if (tijdDeel) {
+          return tijdDeel.substring(0, 5); // Pak de '19:04'
+        }
+      }
+      return str;
+    }
+
+    // Omzetten van locatie of coördinaten naar een klikbare Google Maps link
     function maakKaartLink(locTekst) {
       if (!locTekst || locTekst === '-' || locTekst.trim() === '') return '-';
 
-      // Als het al een werkende hyperlink is (bijv. vanuit Google Apps Script)
       if (locTekst.includes('http://') || locTekst.includes('https://')) {
         return `<a class="map-link" href="${locTekst}" target="_blank">🗺️ Open Kaart</a>`;
       }
 
-      // Anders maken we van het adres/coördinaten een Google Maps zoeklink
       const query = encodeURIComponent(locTekst);
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
       
@@ -323,7 +335,10 @@
         data.reverse().forEach(row => {
           let schoneDatum = (row.datum || '').replace(/'/g, '').trim();
 
-          // Formatteer tussenstops met een kaartlink per stop
+          // Tijd opschonen
+          let startTijdSchoon = opschonenTijd(row.startTijd);
+          let stopTijdSchoon = row.stopTijd ? opschonenTijd(row.stopTijd) : 'Bezig...';
+
           let tussenstopsFormatted = '-';
           if (row.tussenstops && row.tussenstops !== '-') {
             tussenstopsFormatted = row.tussenstops.split('\n').map(stop => {
@@ -338,9 +353,9 @@
           tbody.innerHTML += `
             <tr>
               <td><b>${schoneDatum}</b></td>
-              <td><b>${row.startTijd || '-'}</b><br><small style="color:#666;">${startFormatted}</small></td>
+              <td><b>${startTijdSchoon}</b><br><small style="color:#666;">${startFormatted}</small></td>
               <td><small style="color:#666;">${tussenstopsFormatted}</small></td>
-              <td><b>${row.stopTijd || 'Bezig...'}</b><br><small style="color:#666;">${stopFormatted}</small></td>
+              <td><b>${stopTijdSchoon}</b><br><small style="color:#666;">${stopFormatted}</small></td>
               <td>${row.typeVervoer}</td>
               <td style="white-space: nowrap;">
                 <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
