@@ -58,8 +58,16 @@
     .btn-delete { background-color: #dc3545; color: white; }
 
     /* Stijling voor de Kaart Links */
-    .map-link { color: #007bff; text-decoration: underline; font-weight: bold; cursor: pointer; word-break: break-word; }
-    .map-link:hover { color: #0056b3; }
+    .map-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #0066cc;
+      font-weight: 600;
+      text-decoration: none;
+      margin-top: 3px;
+    }
+    .map-link:hover { text-decoration: underline; color: #004499; }
   </style>
 </head>
 <body>
@@ -199,11 +207,11 @@
       }
     }
 
-    // Geolocatie ophalen (Straat + Huisnummer & Coördinaten)
+    // Geolocatie ophalen
     function haalLocatieOp() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
-          resolve({ tekst: "GPS niet ondersteund", coords: null });
+          resolve({ adres: "GPS niet ondersteund", coords: "" });
           return;
         }
 
@@ -222,15 +230,15 @@
                 const plaats = data.address.town || data.address.city || data.address.village || "";
                 
                 const volAdres = `${weg}${huisnummer}, ${plaats}`.trim();
-                resolve({ tekst: volAdres || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
+                resolve({ adres: volAdres || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
               } else {
-                resolve({ tekst: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
+                resolve({ adres: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
               }
             } catch (e) {
-              resolve({ tekst: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
+              resolve({ adres: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, coords: coordsStr });
             }
           },
-          () => resolve({ tekst: "Locatie niet toegestaan/gevonden", coords: null }),
+          () => resolve({ adres: "Locatie niet toegestaan/gevonden", coords: "" }),
           { enableHighAccuracy: true, timeout: 7000 }
         );
       });
@@ -245,15 +253,16 @@
       btnElement.classList.add('btn-loading');
       btnElement.innerHTML = '⏳ Bezig met opslaan...';
 
-      const locObj = await haalLocatieOp();
+      const locResult = await haalLocatieOp();
       const routeVal = document.getElementById('gekozenRoute').value;
       const typeVervoerVal = document.getElementById('typeVervoer').value;
 
+      // Als er coördinaten zijn, sturen we die door zodat Google Apps Script de exacte link kan opslaan
       const payload = {
         actie: actieType,
         route: routeVal,
-        locatie: locObj.tekst,
-        coords: locObj.coords,
+        locatie: locResult.adres,
+        coords: locResult.coords,
         typeVervoer: typeVervoerVal
       };
 
@@ -281,21 +290,23 @@
       });
     }
 
-    // Hulpmiddel om locatietekst naar een Google Maps Link om te zetten
-    function formatteerLocatieLink(locatieTekst) {
-      if (!locatieTekst || locatieTekst === '-' || locatieTekst.trim() === '') return '-';
+    // Functie die elke locatietekst/coördinaat omzet naar een aanklikbare Google Maps link
+    function maakKaartLink(locTekst) {
+      if (!locTekst || locTekst === '-' || locTekst.trim() === '') return '-';
 
-      // Als de tekst al een URL bevat
-      if (locatieTekst.includes('http://') || locatieTekst.includes('https://')) {
-        return `<a class="map-link" href="${locatieTekst}" target="_blank">🗺️ Bekijk op kaart</a>`;
+      // Als het al een werkende hyperlink is (bijv. vanuit Google Apps Script)
+      if (locTekst.includes('http://') || locTekst.includes('https://')) {
+        return `<a class="map-link" href="${locTekst}" target="_blank">🗺️ Open Kaart</a>`;
       }
 
-      // Maak een Google Maps zoek-URL van het adres/coördinaten
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locatieTekst)}`;
-      return `<a class="map-link" href="${mapsUrl}" target="_blank">🗺️ ${locatieTekst}</a>`;
+      // Anders maken we van het adres/coördinaten een Google Maps zoeklink
+      const query = encodeURIComponent(locTekst);
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+      
+      return `<div>${locTekst}</div><a class="map-link" href="${mapsUrl}" target="_blank">📍 Open Kaart</a>`;
     }
 
-    // Gegevens Ophalen en Weergeven
+    // Gegevens Ophalen
     function laadGegevens() {
       const tbody = document.getElementById('historieTabel');
       tbody.innerHTML = '<tr><td colspan="6">Laden...</td></tr>';
@@ -312,24 +323,24 @@
         data.reverse().forEach(row => {
           let schoneDatum = (row.datum || '').replace(/'/g, '').trim();
 
-          // Formatteer tussenstops met links per regel
+          // Formatteer tussenstops met een kaartlink per stop
           let tussenstopsFormatted = '-';
           if (row.tussenstops && row.tussenstops !== '-') {
-            tussenstopsFormatted = row.tussenstops.split('\n').map(regel => {
-              if (!regel.trim()) return '';
-              return formatteerLocatieLink(regel.trim());
-            }).join('<br>');
+            tussenstopsFormatted = row.tussenstops.split('\n').map(stop => {
+              if (!stop.trim()) return '';
+              return maakKaartLink(stop.trim());
+            }).join('<br><br>');
           }
 
-          let startLoc = formatteerLocatieLink(row.startLocatie);
-          let stopLoc = row.stopLocatie ? formatteerLocatieLink(row.stopLocatie) : '';
+          let startFormatted = maakKaartLink(row.startLocatie);
+          let stopFormatted = row.stopLocatie ? maakKaartLink(row.stopLocatie) : 'Bezig...';
 
           tbody.innerHTML += `
             <tr>
               <td><b>${schoneDatum}</b></td>
-              <td><b>${row.startTijd || '-'}</b><br><small>${startLoc}</small></td>
-              <td><small>${tussenstopsFormatted}</small></td>
-              <td><b>${row.stopTijd || 'Bezig...'}</b><br><small>${stopLoc}</small></td>
+              <td><b>${row.startTijd || '-'}</b><br><small style="color:#666;">${startFormatted}</small></td>
+              <td><small style="color:#666;">${tussenstopsFormatted}</small></td>
+              <td><b>${row.stopTijd || 'Bezig...'}</b><br><small style="color:#666;">${stopFormatted}</small></td>
               <td>${row.typeVervoer}</td>
               <td style="white-space: nowrap;">
                 <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
