@@ -47,6 +47,10 @@
     label { font-weight: bold; margin-bottom: 6px; font-size: 0.85rem; color: #1e293b; }
     input, select, textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; background: #fff; }
     textarea { resize: vertical; height: 40px; }
+    .input-row { display: flex; gap: 5px; }
+    .input-row select { flex: 1; }
+    .btn-add-new { background: #e2e8f0; border: 1px solid var(--border-color); padding: 0 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .btn-add-new:hover { background: #cbd5e1; }
 
     .btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: background 0.2s; width: 100%; }
     .btn:hover { background: var(--primary-dark); }
@@ -122,24 +126,49 @@
       <div class="form-grid">
         <div class="form-group">
           <label>Bedrijf</label>
-          <input type="text" id="bedrijfInput" placeholder="Bedrijfsnaam" required>
+          <div class="input-row">
+            <select id="bedrijfSelect" required onchange="checkNewOption(this, 'Bedrijf')">
+              <option value="">-- Kies bedrijf --</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
           <label>Chauffeur</label>
-          <input type="text" id="chauffeurInput" placeholder="Naam chauffeur" required>
+          <div class="input-row">
+            <select id="chauffeurSelect" required onchange="checkNewOption(this, 'Chauffeur')">
+              <option value="">-- Kies chauffeur --</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
           <label>Kenteken</label>
-          <input type="text" id="kentekenInput" placeholder="bijv. AB-123-C" required>
+          <div class="input-row">
+            <select id="kentekenSelect" required onchange="checkNewOption(this, 'Kenteken')">
+              <option value="">-- Kies kenteken --</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
-          <label>Vanaf</label>
-          Vertrekpunt <input type="text" id="vanafInput" placeholder="Locatie" required>
+          <label>Vanaf (Vertrek)</label>
+          <div class="input-row">
+            <select id="vanafSelect" required onchange="checkNewOption(this, 'Vanaf')">
+              <option value="">-- Kies vertrekpunt --</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
-          <label>Naar</label>
-          Aankomstpunt <input type="text" id="naarInput" placeholder="Locatie" required>
+          <label>Naar (Aankomst)</label>
+          <div class="input-row">
+            <select id="naarSelect" required onchange="checkNewOption(this, 'Naar')">
+              <option value="">-- Kies bestemming --</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
           <label>Afspraak Datum & Tijd</label>
           <input type="datetime-local" id="afspraakInput" required>
@@ -208,10 +237,121 @@
   const db = firebase.firestore();
 
   let rittenList = [];
+  let dropdownOptions = {
+    Bedrijf: [],
+    Chauffeur: [],
+    Kenteken: [],
+    Vanaf: [],
+    Naar: []
+  };
 
   window.onload = function() {
-    loadRitten();
+    loadDropdownsAndRitten();
   };
+
+  // Laad opties uit Firebase en vul de dropdowns
+  function loadDropdownsAndRitten() {
+    db.collection('ritten_settings').doc('dropdowns').get().then(doc => {
+      if (doc.exists) {
+        dropdownOptions = doc.data();
+      }
+      updateAllDropdowns();
+      loadRitten();
+    }).catch(err => {
+      console.log("Fout bij laden instellingen:", err);
+      loadRitten();
+    });
+  }
+
+  function updateAllDropdowns() {
+    populateSelect('bedrijfSelect', dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...');
+    populateSelect('chauffeurSelect', dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...');
+    populateSelect('kentekenSelect', dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...');
+    populateSelect('vanafSelect', dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...');
+    populateSelect('naarSelect', dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...');
+  }
+
+  function populateSelect(selectId, items, promptText) {
+    const select = document.getElementById(selectId);
+    const currentValue = select.value;
+    select.innerHTML = `<option value="">-- Selecteer --</option>`;
+    
+    if (items) {
+      items.sort().forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        select.appendChild(opt);
+      });
+    }
+
+    const newOpt = document.createElement('option');
+    newOpt.value = "ADD_NEW";
+    newOpt.textContent = `+ ${promptText}`;
+    select.appendChild(newOpt);
+
+    if (currentValue) select.value = currentValue;
+  }
+
+  // Detecteer of gebruiker "Nieuw toevoegen" kiest
+  function checkNewOption(selectElement, category) {
+    if (selectElement.value === "ADD_NEW") {
+      let promptMsg = `Voer nieuwe waarde in voor ${category}:`;
+      let inputVal = prompt(promptMsg);
+
+      if (inputVal && inputVal.trim() !== "") {
+        let formattedVal = inputVal.trim();
+
+        // Automatische kenteken formatering (alles aan elkaar -> regels NL kenteken)
+        if (category === 'Kenteken') {
+          formattedVal = formatDutchLicensePlate(formattedVal);
+        }
+
+        if (!dropdownOptions[category]) dropdownOptions[category] = [];
+        if (!dropdownOptions[category].includes(formattedVal)) {
+          dropdownOptions[category].push(formattedVal);
+          saveDropdownsToFirebase();
+        }
+        updateAllDropdowns();
+        selectElement.value = formattedVal;
+      } else {
+        selectElement.value = "";
+      }
+    }
+  }
+
+  // Slimme formatter voor Nederlandse kentekens (side-by-side reeksen)
+  function formatDutchLicensePlate(plate) {
+    let clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // Gekende Nederlandse kentekenstructuren (Sidecode 1 t/m 14)
+    // 1: XX-99-XX, 2: 99-XX-XX, 3: XX-XX-99, 4: XX-99-99, 5: 99-99-XX, 6: 99-XX-99
+    // 7: XX-999-X, 8: X-999-XX, 9: 99-XXX-9, 10: 9-XXX-99, 11: XXX-99-X, 12: X-99-XXX
+    // 13: 9-XX-999, 14: XX-999-XX / 3-XXX-99 etc.
+    if (clean.length === 6) {
+      // Eenvoudige patronen op basis van cijfers/letters posities
+      let p = clean;
+      // Probeer de meest gangbare combinaties op te splitsen met streepjes:
+      if (/^[A-Z]{2}\d{2}[A-Z]{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
+      if (/^\d{2}[A-Z]{2}\d{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
+      if (/^[A-Z]{2}\d{2}\d{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
+      if (/^\d{2}\d{2}[A-Z]{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
+      if (/^\d{2}[A-Z]{3}\d{1}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,3)}-${p.substr(5,1)}`;
+      if (/^\d{1}[A-Z]{3}\d{2}$/.test(p)) return `${p.substr(0,1)}-${p.substr(1,3)}-${p.substr(4,2)}`;
+      if (/^[A-Z]{2}\d{3}[A-Z]{1}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,3)}-${p.substr(5,1)}`;
+      if (/^[A-Z]{1}\d{3}[A-Z]{2}$/.test(p)) return `${p.substr(0,1)}-${p.substr(1,3)}-${p.substr(4,2)}`;
+      if (/^[A-Z]{3}\d{2}[A-Z]{1}$/.test(p)) return `${p.substr(0,3)}-${p.substr(3,2)}-${p.substr(5,1)}`;
+      if (/^[A-Z]{2}\d{3}[A-Z]{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,3)}-${p.substr(5,2)}`;
+    }
+    // Standaard fallback als het afwijkt: voeg streepjes om de 2/3 tekens toe
+    return clean;
+  }
+
+  function saveDropdownsToFirebase() {
+    db.collection('ritten_settings').doc('dropdowns').set(dropdownOptions).catch(err => {
+      console.log("Fout bij opslaan dropdowns:", err);
+    });
+  }
 
   function loadRitten() {
     db.collection('ritten_log').get().then(snapshot => {
@@ -220,8 +360,7 @@
         rittenList.push({ id: doc.id, ...doc.data() });
       });
 
-      // Sorteer op starttijd (nieuwste bovenaan)
-      rittenList.sort((a, b) => (b.startInput || '').localeCompare(a.startInput || ''));
+      rittenList.sort((a, b) => (b.start || '').localeCompare(a.start || ''));
       renderDashboardAndTable();
     }).catch(err => {
       console.log("Fout bij laden ritten:", err);
@@ -231,11 +370,11 @@
   function handleRitSubmit(event) {
     event.preventDefault();
     const rit = {
-      bedrijf: document.getElementById('bedrijfInput').value,
-      chauffeur: document.getElementById('chauffeurInput').value,
-      kenteken: document.getElementById('kentekenInput').value,
-      vanaf: document.getElementById('vanafInput').value,
-      naar: document.getElementById('naarInput').value,
+      bedrijf: document.getElementById('bedrijfSelect').value,
+      chauffeur: document.getElementById('chauffeurSelect').value,
+      kenteken: document.getElementById('kentekenSelect').value,
+      vanaf: document.getElementById('vanafSelect').value,
+      naar: document.getElementById('naarSelect').value,
       afspraak: document.getElementById('afspraakInput').value,
       start: document.getElementById('startInput').value,
       stop: document.getElementById('stopInput').value,
@@ -259,11 +398,10 @@
     }
   }
 
-  // Bepaal prestatie op basis van Stop vs Afspraak (marge van 5 minuten = op tijd)
   function getPerformanceStatus(stopTime, afspraakTime) {
     const stop = new Date(stopTime).getTime();
     const afspraak = new Date(afspraakTime).getTime();
-    const diffMins = (stop - afspraak) / (1000 * 60); // positief = te laat, negatief = te vroeg
+    const diffMins = (stop - afspraak) / (1000 * 60);
 
     if (diffMins < -5) {
       return { label: 'Te Vroeg', class: 'bg-orange', type: 'early' };
@@ -304,9 +442,9 @@
         <td>${item.chauffeur}</td>
         <td>${item.kenteken}</td>
         <td>${item.vanaf} &rarr; ${item.naar}</td>
-        <td>${item.afspraak.replace('T', ' ')}</td>
-        <td>${item.start.replace('T', ' ')}</td>
-        <td>${item.stop.replace('T', ' ')}</td>
+        <td>${item.afspraak ? item.afspraak.replace('T', ' ') : '-'}</td>
+        <td>${item.start ? item.start.replace('T', ' ') : '-'}</td>
+        <td>${item.stop ? item.stop.replace('T', ' ') : '-'}</td>
         <td><span class="badge ${status.class}">${status.label}</span></td>
         <td>${item.opmerkingen || '-'}</td>
         <td>
@@ -337,9 +475,9 @@
         "Kenteken": item.kenteken,
         "Vanaf": item.vanaf,
         "Naar": item.naar,
-        "Afspraak": item.afspraak.replace('T', ' '),
-        "Start": item.start.replace('T', ' '),
-        "Stop": item.stop.replace('T', ' '),
+        "Afspraak": item.afspraak ? item.afspraak.replace('T', ' ') : '',
+        "Start": item.start ? item.start.replace('T', ' ') : '',
+        "Stop": item.stop ? item.stop.replace('T', ' ') : '',
         "Prestatie": status.label,
         "Opmerkingen": item.opmerkingen
       };
