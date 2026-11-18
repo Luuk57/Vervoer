@@ -42,15 +42,20 @@
     .stat-red { color: var(--danger); }
 
     .form-card { background: #f8fafc; border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; margin-bottom: 25px; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 15px; }
     .form-group { display: flex; flex-direction: column; }
     label { font-weight: bold; margin-bottom: 6px; font-size: 0.85rem; color: #1e293b; }
     input, select, textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; background: #fff; }
     textarea { resize: vertical; height: 40px; }
     .input-row { display: flex; gap: 5px; }
     .input-row select { flex: 1; }
-    .btn-add-new { background: #e2e8f0; border: 1px solid var(--border-color); padding: 0 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .btn-add-new:hover { background: #cbd5e1; }
+
+    .time-input-group { display: flex; gap: 8px; align-items: center; }
+    .time-input-group input { flex: 1; }
+    .btn-quick-start { background: var(--success); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+    .btn-quick-start:hover { background: #218838; }
+    .btn-quick-stop { background: var(--danger); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+    .btn-quick-stop:hover { background: #c82333; }
 
     .btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: background 0.2s; width: 100%; }
     .btn:hover { background: var(--primary-dark); }
@@ -75,11 +80,12 @@
     tr:nth-child(even) { background: #f8fafc; }
 
     .actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+    .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
     @media print {
       body { background: white; padding: 0; }
       .container { box-shadow: none; padding: 0; max-width: 100%; }
-      .form-card, .actions-bar, .btn, button { display: none !important; }
+      .form-card, .actions-bar, .filter-bar, .btn, button { display: none !important; }
       table { border: 1px solid #000; }
       th, td { border: 1px solid #000; color: #000; }
       th { background: #ddd !important; color: #000 !important; -webkit-print-color-adjust: exact; }
@@ -126,62 +132,61 @@
       <div class="form-grid">
         <div class="form-group">
           <label>Bedrijf</label>
-          <div class="input-row">
-            <select id="bedrijfSelect" required onchange="checkNewOption(this, 'Bedrijf')">
-              <option value="">-- Kies bedrijf --</option>
-            </select>
-          </div>
+          <select id="bedrijfSelect" required onchange="checkNewOption(this, 'Bedrijf')">
+            <option value="">-- Kies bedrijf --</option>
+          </select>
         </div>
 
         <div class="form-group">
           <label>Chauffeur</label>
-          <div class="input-row">
-            <select id="chauffeurSelect" required onchange="checkNewOption(this, 'Chauffeur')">
-              <option value="">-- Kies chauffeur --</option>
-            </select>
-          </div>
+          <select id="chauffeurSelect" required onchange="checkNewOption(this, 'Chauffeur')">
+            <option value="">-- Kies chauffeur --</option>
+          </select>
         </div>
 
         <div class="form-group">
           <label>Kenteken</label>
-          <div class="input-row">
-            <select id="kentekenSelect" required onchange="checkNewOption(this, 'Kenteken')">
-              <option value="">-- Kies kenteken --</option>
-            </select>
-          </div>
+          <select id="kentekenSelect" required onchange="checkNewOption(this, 'Kenteken')">
+            <option value="">-- Kies kenteken --</option>
+          </select>
         </div>
 
         <div class="form-group">
           <label>Vanaf (Vertrek)</label>
-          <div class="input-row">
-            <select id="vanafSelect" required onchange="checkNewOption(this, 'Vanaf')">
-              <option value="">-- Kies vertrekpunt --</option>
-            </select>
-          </div>
+          <select id="vanafSelect" required onchange="checkNewOption(this, 'Vanaf')">
+            <option value="">-- Kies vertrekpunt --</option>
+          </select>
         </div>
 
         <div class="form-group">
           <label>Naar (Aankomst)</label>
-          <div class="input-row">
-            <select id="naarSelect" required onchange="checkNewOption(this, 'Naar')">
-              <option value="">-- Kies bestemming --</option>
-            </select>
-          </div>
+          <select id="naarSelect" required onchange="checkNewOption(this, 'Naar')">
+            <option value="">-- Kies bestemming --</option>
+          </select>
         </div>
 
         <div class="form-group">
           <label>Afspraak Datum & Tijd</label>
           <input type="datetime-local" id="afspraakInput" required>
         </div>
+
         <div class="form-group">
           <label>Start Datum & Tijd</label>
-          <input type="datetime-local" id="startInput" required>
+          <div class="time-input-group">
+            <input type="datetime-local" id="startInput" required>
+            <button type="button" class="btn-quick-start" onclick="setQuickTime('startInput')">Start</button>
+          </div>
         </div>
+
         <div class="form-group">
           <label>Stop Datum & Tijd (Aankomst)</label>
-          <input type="datetime-local" id="stopInput" required>
+          <div class="time-input-group">
+            <input type="datetime-local" id="stopInput" required>
+            <button type="button" class="btn-quick-stop" onclick="setQuickTime('stopInput')">Stop</button>
+          </div>
         </div>
       </div>
+
       <div class="form-group" style="margin-bottom: 15px;">
         <label>Opmerkingen</label>
         <textarea id="opmerkingenInput" placeholder="Eventuele bijzonderheden..."></textarea>
@@ -190,9 +195,17 @@
     </form>
   </div>
 
-  <!-- ACTIES & EXPORT -->
+  <!-- ACTIES, FILTER & EXPORT -->
   <div class="actions-bar">
-    <h3 style="color: #333;">Ritten Overzicht</h3>
+    <div class="filter-bar">
+      <label for="periodSelect" style="font-size: 0.9rem; margin-bottom: 0;">Periode Weergave & Export:</label>
+      <select id="periodSelect" onchange="loadRitten()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+        <option value="today">Vandaag</option>
+        <option value="7days">Afgelopen 7 dagen</option>
+        <option value="30days">Afgelopen 30 dagen</option>
+        <option value="all">Alle ritten</option>
+      </select>
+    </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
       <button class="btn btn-excel" style="width: auto;" onclick="exportToExcel()">Exporteer naar Excel (.xlsx)</button>
       <button class="btn btn-pdf" style="width: auto;" onclick="exportPDF()">Print / PDF</button>
@@ -216,7 +229,7 @@
         </tr>
       </thead>
       <tbody id="rittenTableBody">
-        <tr><td colspan="10" style="text-align:center;">Geen ritten geregistreerd.</td></tr>
+        <tr><td colspan="10" style="text-align:center;">Geen ritten gevonden voor deze periode.</td></tr>
       </tbody>
     </table>
   </div>
@@ -249,7 +262,22 @@
     loadDropdownsAndRitten();
   };
 
-  // Laad opties uit Firebase en vul de dropdowns
+  function getLocalDateKey(date = new Date()) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  // Snelle knop om huidige datum en tijd in te vullen in de datetime-local input
+  function setQuickTime(inputId) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    document.getElementById(inputId).value = `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
   function loadDropdownsAndRitten() {
     db.collection('ritten_settings').doc('dropdowns').get().then(doc => {
       if (doc.exists) {
@@ -293,7 +321,6 @@
     if (currentValue) select.value = currentValue;
   }
 
-  // Detecteer of gebruiker "Nieuw toevoegen" kiest
   function checkNewOption(selectElement, category) {
     if (selectElement.value === "ADD_NEW") {
       let promptMsg = `Voer nieuwe waarde in voor ${category}:`;
@@ -302,7 +329,6 @@
       if (inputVal && inputVal.trim() !== "") {
         let formattedVal = inputVal.trim();
 
-        // Automatische kenteken formatering (alles aan elkaar -> regels NL kenteken)
         if (category === 'Kenteken') {
           formattedVal = formatDutchLicensePlate(formattedVal);
         }
@@ -320,30 +346,20 @@
     }
   }
 
-  // Slimme formatter voor Nederlandse kentekens (side-by-side reeksen)
   function formatDutchLicensePlate(plate) {
     let clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    
-    // Gekende Nederlandse kentekenstructuren (Sidecode 1 t/m 14)
-    // 1: XX-99-XX, 2: 99-XX-XX, 3: XX-XX-99, 4: XX-99-99, 5: 99-99-XX, 6: 99-XX-99
-    // 7: XX-999-X, 8: X-999-XX, 9: 99-XXX-9, 10: 9-XXX-99, 11: XXX-99-X, 12: X-99-XXX
-    // 13: 9-XX-999, 14: XX-999-XX / 3-XXX-99 etc.
     if (clean.length === 6) {
-      // Eenvoudige patronen op basis van cijfers/letters posities
-      let p = clean;
-      // Probeer de meest gangbare combinaties op te splitsen met streepjes:
-      if (/^[A-Z]{2}\d{2}[A-Z]{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
-      if (/^\d{2}[A-Z]{2}\d{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
-      if (/^[A-Z]{2}\d{2}\d{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
-      if (/^\d{2}\d{2}[A-Z]{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,2)}-${p.substr(4,2)}`;
-      if (/^\d{2}[A-Z]{3}\d{1}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,3)}-${p.substr(5,1)}`;
-      if (/^\d{1}[A-Z]{3}\d{2}$/.test(p)) return `${p.substr(0,1)}-${p.substr(1,3)}-${p.substr(4,2)}`;
-      if (/^[A-Z]{2}\d{3}[A-Z]{1}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,3)}-${p.substr(5,1)}`;
-      if (/^[A-Z]{1}\d{3}[A-Z]{2}$/.test(p)) return `${p.substr(0,1)}-${p.substr(1,3)}-${p.substr(4,2)}`;
-      if (/^[A-Z]{3}\d{2}[A-Z]{1}$/.test(p)) return `${p.substr(0,3)}-${p.substr(3,2)}-${p.substr(5,1)}`;
-      if (/^[A-Z]{2}\d{3}[A-Z]{2}$/.test(p)) return `${p.substr(0,2)}-${p.substr(2,3)}-${p.substr(5,2)}`;
+      if (/^[A-Z]{2}\d{2}[A-Z]{2}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,2)}-${clean.substr(4,2)}`;
+      if (/^\d{2}[A-Z]{2}\d{2}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,2)}-${clean.substr(4,2)}`;
+      if (/^[A-Z]{2}\d{2}\d{2}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,2)}-${clean.substr(4,2)}`;
+      if (/^\d{2}\d{2}[A-Z]{2}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,2)}-${clean.substr(4,2)}`;
+      if (/^\d{2}[A-Z]{3}\d{1}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,3)}-${clean.substr(5,1)}`;
+      if (/^\d{1}[A-Z]{3}\d{2}$/.test(clean)) return `${clean.substr(0,1)}-${clean.substr(1,3)}-${clean.substr(4,2)}`;
+      if (/^[A-Z]{2}\d{3}[A-Z]{1}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,3)}-${clean.substr(5,1)}`;
+      if (/^[A-Z]{1}\d{3}[A-Z]{2}$/.test(clean)) return `${clean.substr(0,1)}-${clean.substr(1,3)}-${clean.substr(4,2)}`;
+      if (/^[A-Z]{3}\d{2}[A-Z]{1}$/.test(clean)) return `${clean.substr(0,3)}-${clean.substr(3,2)}-${clean.substr(5,1)}`;
+      if (/^[A-Z]{2}\d{3}[A-Z]{2}$/.test(clean)) return `${clean.substr(0,2)}-${clean.substr(2,3)}-${clean.substr(5,2)}`;
     }
-    // Standaard fallback als het afwijkt: voeg streepjes om de 2/3 tekens toe
     return clean;
   }
 
@@ -354,10 +370,37 @@
   }
 
   function loadRitten() {
-    db.collection('ritten_log').get().then(snapshot => {
+    const period = document.getElementById('periodSelect').value;
+    let query = db.collection('ritten_log');
+
+    // We filteren op basis van de startdatum (opgeslagen als YYYY-MM-DDTHH:MM in de start-input)
+    query.get().then(snapshot => {
       rittenList = [];
+      const now = new Date();
+
       snapshot.forEach(doc => {
-        rittenList.push({ id: doc.id, ...doc.data() });
+        let data = doc.data();
+        let include = true;
+
+        if (data.start && period !== 'all') {
+          let startDateStr = data.start.split('T')[0]; // Haal YYYY-MM-DD op
+          let todayStr = getLocalDateKey(now);
+
+          if (period === 'today') {
+            if (startDateStr !== todayStr) include = false;
+          } else if (period === '7days' || period === '30days') {
+            let daysCount = period === '7days' ? 7 : 30;
+            let pastDate = new Date();
+            pastDate.setDate(pastDate.getDate() - daysCount);
+            let pastStr = getLocalDateKey(pastDate);
+
+            if (startDateStr < pastStr || startDateStr > todayStr) include = false;
+          }
+        }
+
+        if (include) {
+          rittenList.push({ id: doc.id, ...data });
+        }
       });
 
       rittenList.sort((a, b) => (b.start || '').localeCompare(a.start || ''));
@@ -418,7 +461,7 @@
     tbody.innerHTML = '';
 
     if (rittenList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Geen ritten geregistreerd.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Geen ritten gevonden voor deze periode.</td></tr>';
       document.getElementById('statEarly').innerText = '0%';
       document.getElementById('statOnTime').innerText = '0%';
       document.getElementById('statLate').innerText = '0%';
@@ -463,7 +506,7 @@
 
   function exportToExcel() {
     if (rittenList.length === 0) {
-      alert("Geen ritten om te exporteren.");
+      alert("Geen ritten om te exporteren voor deze periode.");
       return;
     }
 
@@ -486,12 +529,14 @@
     let worksheet = XLSX.utils.json_to_sheet(excelData);
     let workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Rittenlog");
-    XLSX.writeFile(workbook, `Rittenlog_${new Date().toISOString().slice(0,10)}.xlsx`);
+    
+    const period = document.getElementById('periodSelect').value;
+    XLSX.writeFile(workbook, `Rittenlog_${period}_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
   function exportPDF() {
     if (rittenList.length === 0) {
-      alert("Geen ritten om te printen.");
+      alert("Geen ritten om te printen voor deze periode.");
       return;
     }
     window.print();
