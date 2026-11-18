@@ -220,6 +220,9 @@
         <label for="periodSelect" style="font-size: 0.9rem; margin-bottom: 0;">Periode Weergave & Export:</label>
         <select id="periodSelect" onchange="loadRitten()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
           <option value="today">Vandaag</option>
+          <option value="this_week">Deze week</option>
+          <option value="next_week">Komende week</option>
+          <option value="this_month">Deze maand</option>
           <option value="7days">Afgelopen 7 dagen</option>
           <option value="30days">Afgelopen 30 dagen</option>
           <option value="all">Alle ritten</option>
@@ -267,15 +270,15 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Chauffeur</label>
-            <select id="planChauffeurSelect" required>
-              <option value="">-- Kies chauffeur --</option>
+            <label>Chauffeur (optioneel)</label>
+            <select id="planChauffeurSelect">
+              <option value="">-- Geen / Later toewijzen --</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Kenteken</label>
-            <select id="planKentekenSelect" required>
-              <option value="">-- Kies kenteken --</option>
+            <label>Kenteken (optioneel)</label>
+            <select id="planKentekenSelect">
+              <option value="">-- Geen / Later toewijzen --</option>
             </select>
           </div>
           <div class="form-group">
@@ -390,14 +393,14 @@
   }
 
   function updateAllDropdowns() {
-    ['bedrijfSelect', 'planBedrijfSelect'].forEach(id => populateSelect(id, dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...'));
-    ['chauffeurSelect', 'planChauffeurSelect'].forEach(id => populateSelect(id, dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...'));
-    ['kentekenSelect', 'planKentekenSelect'].forEach(id => populateSelect(id, dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...'));
-    ['vanafSelect', 'planVanafSelect'].forEach(id => populateSelect(id, dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...'));
-    ['naarSelect', 'planNaarSelect'].forEach(id => populateSelect(id, dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...'));
+    ['bedrijfSelect', 'planBedrijfSelect'].forEach(id => populateSelect(id, dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...', true));
+    ['chauffeurSelect', 'planChauffeurSelect'].forEach(id => populateSelect(id, dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...', id === 'bedrijfSelect'));
+    ['kentekenSelect', 'planKentekenSelect'].forEach(id => populateSelect(id, dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...', id === 'bedrijfSelect'));
+    ['vanafSelect', 'planVanafSelect'].forEach(id => populateSelect(id, dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...', true));
+    ['naarSelect', 'planNaarSelect'].forEach(id => populateSelect(id, dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...', true));
   }
 
-  function populateSelect(selectId, items, promptText) {
+  function populateSelect(selectId, items, promptText, isRequired = false) {
     const select = document.getElementById(selectId);
     if (!select) return;
     const currentValue = select.value;
@@ -473,16 +476,41 @@
       rittenList = [];
       const now = new Date();
 
+      // Hulpfunctie om te controleren of een datum binnen een bereik valt
+      function isDateInRange(dateStr, startRange, endRange) {
+        return dateStr >= startRange && dateStr <= endRange;
+      }
+
+      // Bereken datums voor "deze week" en "komende week" (maandag t/m zondag)
+      function getWeekRange(d, offsetWeeks = 0) {
+        let date = new Date(d);
+        let day = date.getDay();
+        let diffToMonday = date.getDate() - day + (day === 0 ? -6 : 1) + (offsetWeeks * 7);
+        let monday = new Date(date.setDate(diffToMonday));
+        let sunday = new Date(new Date(monday).setDate(monday.getDate() + 6));
+        return { start: getLocalDateKey(monday), end: getLocalDateKey(sunday) };
+      }
+
+      let todayStr = getLocalDateKey(now);
+      let thisWeek = getWeekRange(now, 0);
+      let nextWeek = getWeekRange(now, 1);
+      let thisMonthPrefix = todayStr.substring(0, 7); // YYYY-MM
+
       snapshot.forEach(doc => {
         let data = doc.data();
         let include = true;
 
         if (data.start && period !== 'all') {
           let startDateStr = data.start.split('T')[0];
-          let todayStr = getLocalDateKey(now);
 
           if (period === 'today') {
             if (startDateStr !== todayStr) include = false;
+          } else if (period === 'this_week') {
+            if (!isDateInRange(startDateStr, thisWeek.start, thisWeek.end)) include = false;
+          } else if (period === 'next_week') {
+            if (!isDateInRange(startDateStr, nextWeek.start, nextWeek.end)) include = false;
+          } else if (period === 'this_month') {
+            if (!startDateStr.startsWith(thisMonthPrefix)) include = false;
           } else if (period === '7days' || period === '30days') {
             let daysCount = period === '7days' ? 7 : 30;
             let pastDate = new Date();
@@ -510,8 +538,8 @@
     const editId = document.getElementById('editRitId').value;
     const rit = {
       bedrijf: document.getElementById('bedrijfSelect').value,
-      chauffeur: document.getElementById('chauffeurSelect').value,
-      kenteken: document.getElementById('kentekenSelect').value,
+      chauffeur: document.getElementById('chauffeurSelect').value || '-',
+      kenteken: document.getElementById('kentekenSelect').value || '-',
       vanaf: document.getElementById('vanafSelect').value,
       naar: document.getElementById('naarSelect').value,
       afspraak: document.getElementById('afspraakInput').value,
@@ -540,8 +568,8 @@
 
     document.getElementById('editRitId').value = rit.id;
     document.getElementById('bedrijfSelect').value = rit.bedrijf;
-    document.getElementById('chauffeurSelect').value = rit.chauffeur;
-    document.getElementById('kentekenSelect').value = rit.kenteken;
+    document.getElementById('chauffeurSelect').value = rit.chauffeur === '-' ? '' : rit.chauffeur;
+    document.getElementById('kentekenSelect').value = rit.kenteken === '-' ? '' : rit.kenteken;
     document.getElementById('vanafSelect').value = rit.vanaf;
     document.getElementById('naarSelect').value = rit.naar;
     document.getElementById('afspraakInput').value = rit.afspraak;
@@ -572,7 +600,7 @@
     }
   }
 
-  // Planning logica
+  // Planning logica zonder verplichte chauffeur/kenteken/start/stop
   function toggleEindType(val) {
     document.getElementById('planEindDatumGroup').style.display = val === 'date' ? 'flex' : 'none';
   }
@@ -580,8 +608,8 @@
   function handlePlanSubmit(event) {
     event.preventDefault();
     const bedrijf = document.getElementById('planBedrijfSelect').value;
-    const chauffeur = document.getElementById('planChauffeurSelect').value;
-    const kenteken = document.getElementById('planKentekenSelect').value;
+    const chauffeur = document.getElementById('planChauffeurSelect').value || '-';
+    const kenteken = document.getElementById('planKentekenSelect').value || '-';
     const vanaf = document.getElementById('planVanafSelect').value;
     const naar = document.getElementById('planNaarSelect').value;
     const tijd = document.getElementById('planTijdAfspraak').value;
@@ -602,7 +630,6 @@
       }
       endDate = new Date(endStr);
     } else {
-      // Geldende maand (laatste dag van de maand)
       endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
     }
 
@@ -611,7 +638,7 @@
     let count = 0;
 
     while (curr <= endDate) {
-      let dayOfWeek = curr.getDay(); // 0 = zon, 1 = ma, ..., 6 = za
+      let dayOfWeek = curr.getDay();
       let match = false;
 
       if (freq === 'single') {
@@ -636,7 +663,7 @@
         batch.set(newRef, {
           bedrijf, chauffeur, kenteken, vanaf, naar,
           afspraak: afspraakVal,
-          start: afspraakVal, // Standaard gelijk gezet
+          start: afspraakVal, // Standaard gelijk gezet voor planning
           stop: afspraakVal,
           opmerkingen: 'Ingeplande rit',
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
