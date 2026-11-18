@@ -332,6 +332,13 @@
 </div>
 
 <script>
+  // Service Worker registratie voor PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log("Service Worker geregistreerd!"))
+      .catch(err => console.log("Service Worker mislukt:", err));
+  }
+
   const firebaseConfig = {
     apiKey: "AIzaSyBWaKFaJ1sUhSvXqK2pOCSDwJ3eMqDJag8",
     authDomain: "dialysedbase.firebaseapp.com",
@@ -523,7 +530,8 @@
         }
       });
 
-      rittenList.sort((a, b) => (b.afspraak || '').localeCompare(a.afspraak || ''));
+      // Sortering OMGEBRAAID: Van oud naar nieuw (vroegste datum/tijd bovenaan)
+      rittenList.sort((a, b) => (a.afspraak || '').localeCompare(b.afspraak || ''));
       renderDashboardAndTable();
     }).catch(err => {
       console.log("Fout bij laden ritten:", err);
