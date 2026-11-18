@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rittenlog & Prestatie Dashboard</title>
+  <title>Rittenlog, Planning & Dashboard</title>
   
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -32,6 +32,14 @@
     
     h1 { color: var(--primary); margin-bottom: 20px; font-size: 1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 
+    /* Navigatie tabs */
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px; flex-wrap: wrap; }
+    .tab-btn { background: #e2e8f0; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: background 0.2s; }
+    .tab-btn.active { background: var(--primary); color: white; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     /* Dashboard Grid */
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .dash-card { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
@@ -47,8 +55,6 @@
     label { font-weight: bold; margin-bottom: 6px; font-size: 0.85rem; color: #1e293b; }
     input, select, textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; background: #fff; }
     textarea { resize: vertical; height: 40px; }
-    .input-row { display: flex; gap: 5px; }
-    .input-row select { flex: 1; }
 
     .time-input-group { display: flex; gap: 8px; align-items: center; }
     .time-input-group input { flex: 1; }
@@ -65,6 +71,8 @@
     .btn-pdf:hover { background: #c9302c; }
     .btn-danger { background: var(--danger); padding: 6px 10px; font-size: 0.8rem; width: auto; }
     .btn-danger:hover { background: #bd2130; }
+    .btn-warning { background: var(--warning); color: #000; padding: 6px 10px; font-size: 0.8rem; width: auto; }
+    .btn-warning:hover { background: #e0a800; }
 
     /* Badges */
     .badge { padding: 5px 10px; border-radius: 6px; font-weight: bold; color: white; display: inline-block; font-size: 0.85rem; }
@@ -85,7 +93,7 @@
     @media print {
       body { background: white; padding: 0; }
       .container { box-shadow: none; padding: 0; max-width: 100%; }
-      .form-card, .actions-bar, .filter-bar, .btn, button { display: none !important; }
+      .nav-tabs, .form-card, .actions-bar, .filter-bar, .btn, button { display: none !important; }
       table { border: 1px solid #000; }
       th, td { border: 1px solid #000; color: #000; }
       th { background: #ddd !important; color: #000 !important; -webkit-print-color-adjust: exact; }
@@ -101,138 +109,222 @@
 
 <div class="container">
   <h1>
-    <span>Rittenlog & Prestatie Dashboard</span>
+    <span>Rittenlog, Planning & Dashboard</span>
     <span id="currentDateLabel" style="font-size: 0.9rem; font-weight: normal; color: #555;">Overzicht</span>
   </h1>
 
-  <!-- DASHBOARD PRESTATIES -->
-  <div class="dashboard-grid">
-    <div class="dash-card">
-      <h4>Te Vroeg</h4>
-      <div class="stat stat-orange" id="statEarly">0%</div>
-    </div>
-    <div class="dash-card">
-      <h4>Op Tijd</h4>
-      <div class="stat stat-green" id="statOnTime">0%</div>
-    </div>
-    <div class="dash-card">
-      <h4>Te Laat</h4>
-      <div class="stat stat-red" id="statLate">0%</div>
-    </div>
-    <div class="dash-card">
-      <h4>Totaal Ritten</h4>
-      <div class="stat" id="statTotal" style="color: var(--primary);">0</div>
-    </div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('logTab', this)">Rittenlog & Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('planTab', this)">Ritten Inplannen</button>
   </div>
 
-  <!-- RITTEN FORMULIER -->
-  <div class="form-card">
-    <h3 style="margin-bottom: 15px; color: var(--primary);">Nieuwe Rit Toevoegen</h3>
-    <form onsubmit="handleRitSubmit(event)">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Bedrijf</label>
-          <select id="bedrijfSelect" required onchange="checkNewOption(this, 'Bedrijf')">
-            <option value="">-- Kies bedrijf --</option>
-          </select>
-        </div>
+  <!-- TAB 1: RITTENLOG & DASHBOARD -->
+  <div id="logTab" class="tab-content active">
+    <!-- DASHBOARD PRESTATIES -->
+    <div class="dashboard-grid">
+      <div class="dash-card">
+        <h4>Te Vroeg</h4>
+        <div class="stat stat-orange" id="statEarly">0%</div>
+      </div>
+      <div class="dash-card">
+        <h4>Op Tijd</h4>
+        <div class="stat stat-green" id="statOnTime">0%</div>
+      </div>
+      <div class="dash-card">
+        <h4>Te Laat</h4>
+        <div class="stat stat-red" id="statLate">0%</div>
+      </div>
+      <div class="dash-card">
+        <h4>Totaal Ritten</h4>
+        <div class="stat" id="statTotal" style="color: var(--primary);">0</div>
+      </div>
+    </div>
 
-        <div class="form-group">
-          <label>Chauffeur</label>
-          <select id="chauffeurSelect" required onchange="checkNewOption(this, 'Chauffeur')">
-            <option value="">-- Kies chauffeur --</option>
-          </select>
-        </div>
+    <!-- RITTEN FORMULIER -->
+    <div class="form-card">
+      <h3 id="formTitle" style="margin-bottom: 15px; color: var(--primary);">Nieuwe Rit Toevoegen</h3>
+      <form onsubmit="handleRitSubmit(event)">
+        <input type="hidden" id="editRitId" value="">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Bedrijf</label>
+            <select id="bedrijfSelect" required onchange="checkNewOption(this, 'Bedrijf')">
+              <option value="">-- Kies bedrijf --</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>Kenteken</label>
-          <select id="kentekenSelect" required onchange="checkNewOption(this, 'Kenteken')">
-            <option value="">-- Kies kenteken --</option>
-          </select>
-        </div>
+          <div class="form-group">
+            <label>Chauffeur</label>
+            <select id="chauffeurSelect" required onchange="checkNewOption(this, 'Chauffeur')">
+              <option value="">-- Kies chauffeur --</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>Vanaf (Vertrek)</label>
-          <select id="vanafSelect" required onchange="checkNewOption(this, 'Vanaf')">
-            <option value="">-- Kies vertrekpunt --</option>
-          </select>
-        </div>
+          <div class="form-group">
+            <label>Kenteken</label>
+            <select id="kentekenSelect" required onchange="checkNewOption(this, 'Kenteken')">
+              <option value="">-- Kies kenteken --</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>Naar (Aankomst)</label>
-          <select id="naarSelect" required onchange="checkNewOption(this, 'Naar')">
-            <option value="">-- Kies bestemming --</option>
-          </select>
-        </div>
+          <div class="form-group">
+            <label>Vanaf (Vertrek)</label>
+            <select id="vanafSelect" required onchange="checkNewOption(this, 'Vanaf')">
+              <option value="">-- Kies vertrekpunt --</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>Afspraak Datum & Tijd</label>
-          <input type="datetime-local" id="afspraakInput" required>
-        </div>
+          <div class="form-group">
+            <label>Naar (Aankomst)</label>
+            <select id="naarSelect" required onchange="checkNewOption(this, 'Naar')">
+              <option value="">-- Kies bestemming --</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>Start Datum & Tijd</label>
-          <div class="time-input-group">
-            <input type="datetime-local" id="startInput" required>
-            <button type="button" class="btn-quick-start" onclick="setQuickTime('startInput')">Start</button>
+          <div class="form-group">
+            <label>Afspraak Datum & Tijd</label>
+            <input type="datetime-local" id="afspraakInput" required>
+          </div>
+
+          <div class="form-group">
+            <label>Start Datum & Tijd</label>
+            <div class="time-input-group">
+              <input type="datetime-local" id="startInput" required>
+              <button type="button" class="btn-quick-start" onclick="setQuickTime('startInput')">Start</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Stop Datum & Tijd (Aankomst)</label>
+            <div class="time-input-group">
+              <input type="datetime-local" id="stopInput" required>
+              <button type="button" class="btn-quick-stop" onclick="setQuickTime('stopInput')">Stop</button>
+            </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Stop Datum & Tijd (Aankomst)</label>
-          <div class="time-input-group">
-            <input type="datetime-local" id="stopInput" required>
-            <button type="button" class="btn-quick-stop" onclick="setQuickTime('stopInput')">Stop</button>
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label>Opmerkingen</label>
+          <textarea id="opmerkingenInput" placeholder="Eventuele bijzonderheden..."></textarea>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn" id="submitBtn">Rit Opslaan</button>
+          <button type="button" class="btn" style="background: #6c757d; display: none;" id="cancelEditBtn" onclick="resetForm()">Annuleren</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ACTIES, FILTER & EXPORT -->
+    <div class="actions-bar">
+      <div class="filter-bar">
+        <label for="periodSelect" style="font-size: 0.9rem; margin-bottom: 0;">Periode Weergave & Export:</label>
+        <select id="periodSelect" onchange="loadRitten()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <option value="today">Vandaag</option>
+          <option value="7days">Afgelopen 7 dagen</option>
+          <option value="30days">Afgelopen 30 dagen</option>
+          <option value="all">Alle ritten</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-excel" style="width: auto;" onclick="exportToExcel()">Exporteer naar Excel (.xlsx)</button>
+        <button class="btn btn-pdf" style="width: auto;" onclick="exportPDF()">Print / PDF</button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Bedrijf</th>
+            <th>Chauffeur</th>
+            <th>Kenteken</th>
+            <th>Vanaf &rarr; Naar</th>
+            <th>Afspraak</th>
+            <th>Start</th>
+            <th>Stop</th>
+            <th>Prestatie</th>
+            <th>Opmerkingen</th>
+            <th>Acties</th>
+          </tr>
+        </thead>
+        <tbody id="rittenTableBody">
+          <tr><td colspan="10" style="text-align:center;">Geen ritten gevonden voor deze periode.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 2: RITTEN INPLANNEN -->
+  <div id="planTab" class="tab-content">
+    <div class="form-card">
+      <h3 style="margin-bottom: 15px; color: var(--primary);">Herhalende Ritten Inplannen</h3>
+      <form onsubmit="handlePlanSubmit(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Bedrijf</label>
+            <select id="planBedrijfSelect" required>
+              <option value="">-- Kies bedrijf --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Chauffeur</label>
+            <select id="planChauffeurSelect" required>
+              <option value="">-- Kies chauffeur --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Kenteken</label>
+            <select id="planKentekenSelect" required>
+              <option value="">-- Kies kenteken --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Vanaf (Vertrek)</label>
+            <select id="planVanafSelect" required>
+              <option value="">-- Kies vertrekpunt --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Naar (Aankomst)</label>
+            <select id="planNaarSelect" required>
+              <option value="">-- Kies bestemming --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tijd van de Afspraak (HH:MM)</label>
+            <input type="time" id="planTijdAfspraak" required>
+          </div>
+          <div class="form-group">
+            <label>Herhaling / Frequentie</label>
+            <select id="planFrequentie" required>
+              <option value="single">Bepaalde datum (eenmalig)</option>
+              <option value="daily">Elke dag</option>
+              <option value="alternate">Om de dag</option>
+              <option value="mwf">ma - wo - vrij</option>
+              <option value="tts">di - do - za</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Startdatum van de planning</label>
+            <input type="date" id="planStartDatum" required>
+          </div>
+          <div class="form-group">
+            <label>Eindpunt planning</label>
+            <select id="planEindType" onchange="toggleEindType(this.value)" required>
+              <option value="date">Tot specifieke einddatum</option>
+              <option value="month">Voor de geldende maand</option>
+            </select>
+          </div>
+          <div class="form-group" id="planEindDatumGroup">
+            <label>Einddatum</label>
+            <input type="date" id="planEindDatum">
           </div>
         </div>
-      </div>
-
-      <div class="form-group" style="margin-bottom: 15px;">
-        <label>Opmerkingen</label>
-        <textarea id="opmerkingenInput" placeholder="Eventuele bijzonderheden..."></textarea>
-      </div>
-      <button type="submit" class="btn">Rit Opslaan</button>
-    </form>
-  </div>
-
-  <!-- ACTIES, FILTER & EXPORT -->
-  <div class="actions-bar">
-    <div class="filter-bar">
-      <label for="periodSelect" style="font-size: 0.9rem; margin-bottom: 0;">Periode Weergave & Export:</label>
-      <select id="periodSelect" onchange="loadRitten()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
-        <option value="today">Vandaag</option>
-        <option value="7days">Afgelopen 7 dagen</option>
-        <option value="30days">Afgelopen 30 dagen</option>
-        <option value="all">Alle ritten</option>
-      </select>
-    </div>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-      <button class="btn btn-excel" style="width: auto;" onclick="exportToExcel()">Exporteer naar Excel (.xlsx)</button>
-      <button class="btn btn-pdf" style="width: auto;" onclick="exportPDF()">Print / PDF</button>
+        <button type="submit" class="btn">Ritten Reeks Inplannen</button>
+      </form>
     </div>
   </div>
 
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Bedrijf</th>
-          <th>Chauffeur</th>
-          <th>Kenteken</th>
-          <th>Vanaf &rarr; Naar</th>
-          <th>Afspraak</th>
-          <th>Start</th>
-          <th>Stop</th>
-          <th>Prestatie</th>
-          <th>Opmerkingen</th>
-          <th>Actie</th>
-        </tr>
-      </thead>
-      <tbody id="rittenTableBody">
-        <tr><td colspan="10" style="text-align:center;">Geen ritten gevonden voor deze periode.</td></tr>
-      </tbody>
-    </table>
-  </div>
 </div>
 
 <script>
@@ -262,11 +354,17 @@
     loadDropdownsAndRitten();
   };
 
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
   function getLocalDateKey(date = new Date()) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
-  // Snelle knop om huidige datum en tijd in te vullen in de datetime-local input
   function setQuickTime(inputId) {
     const now = new Date();
     const year = now.getFullYear();
@@ -292,15 +390,16 @@
   }
 
   function updateAllDropdowns() {
-    populateSelect('bedrijfSelect', dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...');
-    populateSelect('chauffeurSelect', dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...');
-    populateSelect('kentekenSelect', dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...');
-    populateSelect('vanafSelect', dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...');
-    populateSelect('naarSelect', dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...');
+    ['bedrijfSelect', 'planBedrijfSelect'].forEach(id => populateSelect(id, dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...'));
+    ['chauffeurSelect', 'planChauffeurSelect'].forEach(id => populateSelect(id, dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...'));
+    ['kentekenSelect', 'planKentekenSelect'].forEach(id => populateSelect(id, dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...'));
+    ['vanafSelect', 'planVanafSelect'].forEach(id => populateSelect(id, dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...'));
+    ['naarSelect', 'planNaarSelect'].forEach(id => populateSelect(id, dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...'));
   }
 
   function populateSelect(selectId, items, promptText) {
     const select = document.getElementById(selectId);
+    if (!select) return;
     const currentValue = select.value;
     select.innerHTML = `<option value="">-- Selecteer --</option>`;
     
@@ -328,7 +427,6 @@
 
       if (inputVal && inputVal.trim() !== "") {
         let formattedVal = inputVal.trim();
-
         if (category === 'Kenteken') {
           formattedVal = formatDutchLicensePlate(formattedVal);
         }
@@ -371,10 +469,7 @@
 
   function loadRitten() {
     const period = document.getElementById('periodSelect').value;
-    let query = db.collection('ritten_log');
-
-    // We filteren op basis van de startdatum (opgeslagen als YYYY-MM-DDTHH:MM in de start-input)
-    query.get().then(snapshot => {
+    db.collection('ritten_log').get().then(snapshot => {
       rittenList = [];
       const now = new Date();
 
@@ -383,7 +478,7 @@
         let include = true;
 
         if (data.start && period !== 'all') {
-          let startDateStr = data.start.split('T')[0]; // Haal YYYY-MM-DD op
+          let startDateStr = data.start.split('T')[0];
           let todayStr = getLocalDateKey(now);
 
           if (period === 'today') {
@@ -412,6 +507,7 @@
 
   function handleRitSubmit(event) {
     event.preventDefault();
+    const editId = document.getElementById('editRitId').value;
     const rit = {
       bedrijf: document.getElementById('bedrijfSelect').value,
       chauffeur: document.getElementById('chauffeurSelect').value,
@@ -425,12 +521,47 @@
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    db.collection('ritten_log').add(rit).then(() => {
-      document.querySelector('form').reset();
-      loadRitten();
-    }).catch(err => {
-      alert("Fout bij opslaan rit: " + err.message);
-    });
+    if (editId) {
+      db.collection('ritten_log').doc(editId).update(rit).then(() => {
+        resetForm();
+        loadRitten();
+      }).catch(err => alert("Fout bij bijwerken: " + err.message));
+    } else {
+      db.collection('ritten_log').add(rit).then(() => {
+        resetForm();
+        loadRitten();
+      }).catch(err => alert("Fout bij opslaan rit: " + err.message));
+    }
+  }
+
+  function editRit(id) {
+    const rit = rittenList.find(r => r.id === id);
+    if (!rit) return;
+
+    document.getElementById('editRitId').value = rit.id;
+    document.getElementById('bedrijfSelect').value = rit.bedrijf;
+    document.getElementById('chauffeurSelect').value = rit.chauffeur;
+    document.getElementById('kentekenSelect').value = rit.kenteken;
+    document.getElementById('vanafSelect').value = rit.vanaf;
+    document.getElementById('naarSelect').value = rit.naar;
+    document.getElementById('afspraakInput').value = rit.afspraak;
+    document.getElementById('startInput').value = rit.start;
+    document.getElementById('stopInput').value = rit.stop;
+    document.getElementById('opmerkingenInput').value = rit.opmerkingen || '';
+
+    document.getElementById('formTitle').innerText = 'Rit Bewerken';
+    document.getElementById('submitBtn').innerText = 'Bijwerken Opslaan';
+    document.getElementById('cancelEditBtn').style.display = 'block';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetForm() {
+    document.querySelector('#logTab form').reset();
+    document.getElementById('editRitId').value = '';
+    document.getElementById('formTitle').innerText = 'Nieuwe Rit Toevoegen';
+    document.getElementById('submitBtn').innerText = 'Rit Opslaan';
+    document.getElementById('cancelEditBtn').style.display = 'none';
   }
 
   function deleteRit(id) {
@@ -439,6 +570,91 @@
         loadRitten();
       });
     }
+  }
+
+  // Planning logica
+  function toggleEindType(val) {
+    document.getElementById('planEindDatumGroup').style.display = val === 'date' ? 'flex' : 'none';
+  }
+
+  function handlePlanSubmit(event) {
+    event.preventDefault();
+    const bedrijf = document.getElementById('planBedrijfSelect').value;
+    const chauffeur = document.getElementById('planChauffeurSelect').value;
+    const kenteken = document.getElementById('planKentekenSelect').value;
+    const vanaf = document.getElementById('planVanafSelect').value;
+    const naar = document.getElementById('planNaarSelect').value;
+    const tijd = document.getElementById('planTijdAfspraak').value;
+    const freq = document.getElementById('planFrequentie').value;
+    const startStr = document.getElementById('planStartDatum').value;
+    const eindType = document.getElementById('planEindType').value;
+
+    if (!startStr || !tijd) return;
+
+    let startDate = new Date(startStr);
+    let endDate = new Date(startDate);
+
+    if (eindType === 'date') {
+      const endStr = document.getElementById('planEindDatum').value;
+      if (!endStr) {
+        alert("Vul een einddatum in.");
+        return;
+      }
+      endDate = new Date(endStr);
+    } else {
+      // Geldende maand (laatste dag van de maand)
+      endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+    }
+
+    let batch = db.batch();
+    let curr = new Date(startDate);
+    let count = 0;
+
+    while (curr <= endDate) {
+      let dayOfWeek = curr.getDay(); // 0 = zon, 1 = ma, ..., 6 = za
+      let match = false;
+
+      if (freq === 'single') {
+        match = true;
+      } else if (freq === 'daily') {
+        match = true;
+      } else if (freq === 'alternate') {
+        let diffTime = Math.abs(curr - startDate);
+        let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays % 2 === 0) match = true;
+      } else if (freq === 'mwf') {
+        if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) match = true;
+      } else if (freq === 'tts') {
+        if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6) match = true;
+      }
+
+      if (match) {
+        let dateKey = getLocalDateKey(curr);
+        let afspraakVal = `${dateKey}T${tijd}`;
+
+        let newRef = db.collection('ritten_log').doc();
+        batch.set(newRef, {
+          bedrijf, chauffeur, kenteken, vanaf, naar,
+          afspraak: afspraakVal,
+          start: afspraakVal, // Standaard gelijk gezet
+          stop: afspraakVal,
+          opmerkingen: 'Ingeplande rit',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        count++;
+      }
+
+      if (freq === 'single') break;
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    batch.commit().then(() => {
+      alert(`Succesvol ${count} ritten ingepland!`);
+      loadRitten();
+      switchTab('logTab', document.querySelector('.nav-tabs button'));
+    }).catch(err => {
+      alert("Fout bij inplannen: " + err.message);
+    });
   }
 
   function getPerformanceStatus(stopTime, afspraakTime) {
@@ -491,7 +707,10 @@
         <td><span class="badge ${status.class}">${status.label}</span></td>
         <td>${item.opmerkingen || '-'}</td>
         <td>
-          <button class="btn btn-danger" onclick="deleteRit('${item.id}')">Verwijderen</button>
+          <div style="display: flex; gap: 5px;">
+            <button class="btn btn-warning" onclick="editRit('${item.id}')">Bewerken</button>
+            <button class="btn btn-danger" onclick="deleteRit('${item.id}')">Verwijderen</button>
+          </div>
         </td>
       `;
       tbody.appendChild(tr);
