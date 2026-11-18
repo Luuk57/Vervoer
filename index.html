@@ -79,6 +79,7 @@
     .bg-green { background-color: var(--success); }
     .bg-orange { background-color: #f59e0b; }
     .bg-red { background-color: var(--danger); }
+    .bg-gray { background-color: #64748b; }
 
     /* Tabellen */
     .table-container { overflow-x: auto; margin-top: 15px; }
@@ -189,7 +190,7 @@
           <div class="form-group">
             <label>Start Datum & Tijd</label>
             <div class="time-input-group">
-              <input type="datetime-local" id="startInput" required>
+              <input type="datetime-local" id="startInput">
               <button type="button" class="btn-quick-start" onclick="setQuickTime('startInput')">Start</button>
             </div>
           </div>
@@ -197,7 +198,7 @@
           <div class="form-group">
             <label>Stop Datum & Tijd (Aankomst)</label>
             <div class="time-input-group">
-              <input type="datetime-local" id="stopInput" required>
+              <input type="datetime-local" id="stopInput">
               <button type="button" class="btn-quick-stop" onclick="setQuickTime('stopInput')">Stop</button>
             </div>
           </div>
@@ -331,7 +332,6 @@
 </div>
 
 <script>
-  // Firebase configuratie
   const firebaseConfig = {
     apiKey: "AIzaSyBWaKFaJ1sUhSvXqK2pOCSDwJ3eMqDJag8",
     authDomain: "dialysedbase.firebaseapp.com",
@@ -393,14 +393,14 @@
   }
 
   function updateAllDropdowns() {
-    ['bedrijfSelect', 'planBedrijfSelect'].forEach(id => populateSelect(id, dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...', true));
-    ['chauffeurSelect', 'planChauffeurSelect'].forEach(id => populateSelect(id, dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...', id === 'bedrijfSelect'));
-    ['kentekenSelect', 'planKentekenSelect'].forEach(id => populateSelect(id, dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...', id === 'bedrijfSelect'));
-    ['vanafSelect', 'planVanafSelect'].forEach(id => populateSelect(id, dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...', true));
-    ['naarSelect', 'planNaarSelect'].forEach(id => populateSelect(id, dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...', true));
+    ['bedrijfSelect', 'planBedrijfSelect'].forEach(id => populateSelect(id, dropdownOptions.Bedrijf, 'Nieuw bedrijf toevoegen...'));
+    ['chauffeurSelect', 'planChauffeurSelect'].forEach(id => populateSelect(id, dropdownOptions.Chauffeur, 'Nieuwe chauffeur toevoegen...'));
+    ['kentekenSelect', 'planKentekenSelect'].forEach(id => populateSelect(id, dropdownOptions.Kenteken, 'Nieuw kenteken toevoegen...'));
+    ['vanafSelect', 'planVanafSelect'].forEach(id => populateSelect(id, dropdownOptions.Vanaf, 'Nieuw vertrekpunt toevoegen...'));
+    ['naarSelect', 'planNaarSelect'].forEach(id => populateSelect(id, dropdownOptions.Naar, 'Nieuwe bestemming toevoegen...'));
   }
 
-  function populateSelect(selectId, items, promptText, isRequired = false) {
+  function populateSelect(selectId, items, promptText) {
     const select = document.getElementById(selectId);
     if (!select) return;
     const currentValue = select.value;
@@ -476,12 +476,10 @@
       rittenList = [];
       const now = new Date();
 
-      // Hulpfunctie om te controleren of een datum binnen een bereik valt
       function isDateInRange(dateStr, startRange, endRange) {
         return dateStr >= startRange && dateStr <= endRange;
       }
 
-      // Bereken datums voor "deze week" en "komende week" (maandag t/m zondag)
       function getWeekRange(d, offsetWeeks = 0) {
         let date = new Date(d);
         let day = date.getDay();
@@ -494,30 +492,29 @@
       let todayStr = getLocalDateKey(now);
       let thisWeek = getWeekRange(now, 0);
       let nextWeek = getWeekRange(now, 1);
-      let thisMonthPrefix = todayStr.substring(0, 7); // YYYY-MM
+      let thisMonthPrefix = todayStr.substring(0, 7);
 
       snapshot.forEach(doc => {
         let data = doc.data();
         let include = true;
+        let checkDateStr = data.afspraak ? data.afspraak.split('T')[0] : (data.start ? data.start.split('T')[0] : '');
 
-        if (data.start && period !== 'all') {
-          let startDateStr = data.start.split('T')[0];
-
+        if (checkDateStr && period !== 'all') {
           if (period === 'today') {
-            if (startDateStr !== todayStr) include = false;
+            if (checkDateStr !== todayStr) include = false;
           } else if (period === 'this_week') {
-            if (!isDateInRange(startDateStr, thisWeek.start, thisWeek.end)) include = false;
+            if (!isDateInRange(checkDateStr, thisWeek.start, thisWeek.end)) include = false;
           } else if (period === 'next_week') {
-            if (!isDateInRange(startDateStr, nextWeek.start, nextWeek.end)) include = false;
+            if (!isDateInRange(checkDateStr, nextWeek.start, nextWeek.end)) include = false;
           } else if (period === 'this_month') {
-            if (!startDateStr.startsWith(thisMonthPrefix)) include = false;
+            if (!checkDateStr.startsWith(thisMonthPrefix)) include = false;
           } else if (period === '7days' || period === '30days') {
             let daysCount = period === '7days' ? 7 : 30;
             let pastDate = new Date();
             pastDate.setDate(pastDate.getDate() - daysCount);
             let pastStr = getLocalDateKey(pastDate);
 
-            if (startDateStr < pastStr || startDateStr > todayStr) include = false;
+            if (checkDateStr < pastStr || checkDateStr > todayStr) include = false;
           }
         }
 
@@ -526,7 +523,7 @@
         }
       });
 
-      rittenList.sort((a, b) => (b.start || '').localeCompare(a.start || ''));
+      rittenList.sort((a, b) => (b.afspraak || '').localeCompare(a.afspraak || ''));
       renderDashboardAndTable();
     }).catch(err => {
       console.log("Fout bij laden ritten:", err);
@@ -543,8 +540,8 @@
       vanaf: document.getElementById('vanafSelect').value,
       naar: document.getElementById('naarSelect').value,
       afspraak: document.getElementById('afspraakInput').value,
-      start: document.getElementById('startInput').value,
-      stop: document.getElementById('stopInput').value,
+      start: document.getElementById('startInput').value || '',
+      stop: document.getElementById('stopInput').value || '',
       opmerkingen: document.getElementById('opmerkingenInput').value,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -572,9 +569,9 @@
     document.getElementById('kentekenSelect').value = rit.kenteken === '-' ? '' : rit.kenteken;
     document.getElementById('vanafSelect').value = rit.vanaf;
     document.getElementById('naarSelect').value = rit.naar;
-    document.getElementById('afspraakInput').value = rit.afspraak;
-    document.getElementById('startInput').value = rit.start;
-    document.getElementById('stopInput').value = rit.stop;
+    document.getElementById('afspraakInput').value = rit.afspraak || '';
+    document.getElementById('startInput').value = rit.start || '';
+    document.getElementById('stopInput').value = rit.stop || '';
     document.getElementById('opmerkingenInput').value = rit.opmerkingen || '';
 
     document.getElementById('formTitle').innerText = 'Rit Bewerken';
@@ -600,7 +597,6 @@
     }
   }
 
-  // Planning logica zonder verplichte chauffeur/kenteken/start/stop
   function toggleEindType(val) {
     document.getElementById('planEindDatumGroup').style.display = val === 'date' ? 'flex' : 'none';
   }
@@ -663,8 +659,8 @@
         batch.set(newRef, {
           bedrijf, chauffeur, kenteken, vanaf, naar,
           afspraak: afspraakVal,
-          start: afspraakVal, // Standaard gelijk gezet voor planning
-          stop: afspraakVal,
+          start: '', // Nog niet gestart bij inplannen
+          stop: '',  // Nog niet gestopt bij inplannen
           opmerkingen: 'Ingeplande rit',
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -685,6 +681,9 @@
   }
 
   function getPerformanceStatus(stopTime, afspraakTime) {
+    if (!stopTime) {
+      return { label: 'Nog niet verreden', class: 'bg-gray', type: 'pending' };
+    }
     const stop = new Date(stopTime).getTime();
     const afspraak = new Date(afspraakTime).getTime();
     const diffMins = (stop - afspraak) / (1000 * 60);
@@ -715,12 +714,13 @@
     let countEarly = 0;
     let countOnTime = 0;
     let countLate = 0;
+    let verredenCount = 0;
 
     rittenList.forEach(item => {
       const status = getPerformanceStatus(item.stop, item.afspraak);
-      if (status.type === 'early') countEarly++;
-      if (status.type === 'ontime') countOnTime++;
-      if (status.type === 'late') countLate++;
+      if (status.type === 'early') { countEarly++; verredenCount++; }
+      if (status.type === 'ontime') { countOnTime++; verredenCount++; }
+      if (status.type === 'late') { countLate++; verredenCount++; }
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -744,9 +744,11 @@
     });
 
     const total = rittenList.length;
-    document.getElementById('statEarly').innerText = `${Math.round((countEarly / total) * 100)}%`;
-    document.getElementById('statOnTime').innerText = `${Math.round((countOnTime / total) * 100)}%`;
-    document.getElementById('statLate').innerText = `${Math.round((countLate / total) * 100)}%`;
+    // Bereken percentages op basis van de ritten die daadwerkelijk een stoptijd hebben (verreden zijn)
+    let base = verredenCount > 0 ? verredenCount : 1;
+    document.getElementById('statEarly').innerText = `${Math.round((countEarly / base) * 100)}%`;
+    document.getElementById('statOnTime').innerText = `${Math.round((countOnTime / base) * 100)}%`;
+    document.getElementById('statLate').innerText = `${Math.round((countLate / base) * 100)}%`;
     document.getElementById('statTotal').innerText = total;
   }
 
