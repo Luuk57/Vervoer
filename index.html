@@ -266,31 +266,31 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Bedrijf</label>
-            <select id="planBedrijfSelect" required>
+            <select id="planBedrijfSelect" required onchange="checkNewOption(this, 'Bedrijf')">
               <option value="">-- Kies bedrijf --</option>
             </select>
           </div>
           <div class="form-group">
             <label>Chauffeur (optioneel)</label>
-            <select id="planChauffeurSelect">
+            <select id="planChauffeurSelect" onchange="checkNewOption(this, 'Chauffeur')">
               <option value="">-- Geen / Later toewijzen --</option>
             </select>
           </div>
           <div class="form-group">
             <label>Kenteken (optioneel)</label>
-            <select id="planKentekenSelect">
+            <select id="planKentekenSelect" onchange="checkNewOption(this, 'Kenteken')">
               <option value="">-- Geen / Later toewijzen --</option>
             </select>
           </div>
           <div class="form-group">
             <label>Vanaf (Vertrek)</label>
-            <select id="planVanafSelect" required>
+            <select id="planVanafSelect" required onchange="checkNewOption(this, 'Vanaf')">
               <option value="">-- Kies vertrekpunt --</option>
             </select>
           </div>
           <div class="form-group">
             <label>Naar (Aankomst)</label>
-            <select id="planNaarSelect" required>
+            <select id="planNaarSelect" required onchange="checkNewOption(this, 'Naar')">
               <option value="">-- Kies bestemming --</option>
             </select>
           </div>
@@ -659,8 +659,8 @@
         batch.set(newRef, {
           bedrijf, chauffeur, kenteken, vanaf, naar,
           afspraak: afspraakVal,
-          start: '', // Nog niet gestart bij inplannen
-          stop: '',  // Nog niet gestopt bij inplannen
+          start: '',
+          stop: '',
           opmerkingen: 'Ingeplande rit',
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -744,7 +744,6 @@
     });
 
     const total = rittenList.length;
-    // Bereken percentages op basis van de ritten die daadwerkelijk een stoptijd hebben (verreden zijn)
     let base = verredenCount > 0 ? verredenCount : 1;
     document.getElementById('statEarly').innerText = `${Math.round((countEarly / base) * 100)}%`;
     document.getElementById('statOnTime').innerText = `${Math.round((countOnTime / base) * 100)}%`;
