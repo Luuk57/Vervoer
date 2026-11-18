@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Clock, Calendar, Car, Home, Building, User, Trash2, Save, PlusCircle, LayoutDashboard, List, Loader2, Edit, CheckCircle, XCircle, AlertTriangle, Key, Share2 } from 'lucide-react';
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Clock, Calendar, Car, Home, Building, User, Trash2, Save, PlusCircle, LayoutDashboard, List, Loader2, Edit, CheckCircle, XCircle, AlertTriangle, Key, Share2, Navigation, Smartphone, Download } from 'lucide-react';
 
 // --- GLOBALE VARIABELEN & CONSTANTEN ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -35,31 +35,31 @@ const initialTripState = {
     toAddress: '',
     driverName: '',
     licensePlate: '',
+    notes: '',
 };
 
 // Functie om Firestore paden te genereren
-// *** AANGEPAST NAAR PUBLIEKE COLLECTIE VOOR GEDEELDE TOEGANG ***
 const getCollectionPaths = () => ({
-    // Pad: artifacts/{appId}/public/data/{collectieNaam}
     trips: `artifacts/${appId}/public/data/trips`,
     drivers: `artifacts/${appId}/public/data/drivers`,
     addresses: `artifacts/${appId}/public/data/addresses`,
     licensePlates: `artifacts/${appId}/public/data/licensePlates`,
 });
 
-// Functie om datum en tijd te formatteren voor invoervelden
+// Datum en tijd formatters
 const formatDate = (date) => {
     if (!date) return '';
     const d = new Date(date);
     return d.toISOString().split('T')[0];
 };
+
 const formatTime = (date) => {
     if (!date) return '';
     const d = new Date(date);
     return d.toTimeString().split(' ')[0].substring(0, 5);
 };
 
-// --- RITTEN FORMULIER COMPONENT (Buiten App geplaatst om re-renders te optimaliseren) ---
+// --- RITTEN FORMULIER COMPONENT ---
 const RittenForm = memo(({
     currentTrip,
     editingId,
@@ -81,231 +81,252 @@ const RittenForm = memo(({
     handleStartNow,
     handleEndNow
 }) => (
-    <div className="p-4 bg-white rounded-xl shadow-lg">
-        <h2 className="text-2xl font-bold text-indigo-700 mb-6 flex items-center">
-            <Car className="mr-2" /> {editingId ? 'Rit Bewerken' : 'Nieuwe Rit Invoeren'}
+    <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 border border-indigo-100 mb-20 md:mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-indigo-800 mb-6 flex items-center">
+            <Car className="mr-2.5 w-6 h-6 text-indigo-600" /> 
+            {editingId ? 'Rit Bewerken' : 'Nieuwe Rit Invoeren'}
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
-            {/* --- Chauffeur Dropdown & Naam --- */}
-            <div className="md:col-span-1 space-y-2 mb-4 p-4 border border-indigo-200 rounded-lg bg-indigo-50">
-                <label className="block text-sm font-medium text-gray-700 flex items-center"><User className="w-4 h-4 mr-1" /> Naam Chauffeur</label>
+            {/* Chauffeur Selectie */}
+            <div className="space-y-2 bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
+                <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                    <User className="w-4 h-4 mr-1.5 text-indigo-600" /> Naam Chauffeur
+                </label>
                 <select
                     name="driverName"
                     value={currentTrip.driverName}
                     onChange={handleChange}
-                    className="w-full p-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    className="w-full p-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 shadow-sm"
                 >
                     <option value="" disabled>-- Selecteer Chauffeur --</option>
                     {drivers.map(name => (
                         <option key={name} value={name}>{name}</option>
                     ))}
-                    <option value="NIEUWE_CHAUFFEUR">--- Nieuwe Chauffeur Invoeren ---</option>
+                    <option value="NIEUWE_CHAUFFEUR">➕ Nieuwe Chauffeur Invoeren</option>
                 </select>
 
                 {currentTrip.driverName === 'NIEUWE_CHAUFFEUR' && (
                     <input
                         type="text"
-                        placeholder="Voer nieuwe chauffeur naam in (max. 30 tekens)"
+                        placeholder="Voer nieuwe chauffeur naam in"
                         value={newDriverName}
                         onChange={(e) => setNewDriverName(e.target.value)}
                         maxLength={30}
-                        className="mt-2 w-full p-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-3 w-full p-3 bg-white border border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                 )}
             </div>
             
-            {/* --- Kenteken Dropdown & Invoer --- */}
-            <div className="md:col-span-1 space-y-2 mb-4 p-4 border border-indigo-200 rounded-lg bg-indigo-50">
-                <label className="block text-sm font-medium text-gray-700 flex items-center"><Key className="w-4 h-4 mr-1" /> Kenteken</label>
+            {/* Kenteken Selectie */}
+            <div className="space-y-2 bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
+                <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                    <Key className="w-4 h-4 mr-1.5 text-indigo-600" /> Kenteken
+                </label>
                 <select
                     name="licensePlate"
                     value={currentTrip.licensePlate}
                     onChange={handleChange}
-                    className="w-full p-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    className="w-full p-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 shadow-sm"
                 >
                     <option value="" disabled>-- Selecteer Kenteken --</option>
                     {licensePlates.map(plate => (
                         <option key={plate} value={plate}>{plate}</option>
                     ))}
-                    <option value="NIEUW_KENTEKEN">--- Nieuw Kenteken Invoeren ---</option>
+                    <option value="NIEUW_KENTEKEN">➕ Nieuw Kenteken Invoeren</option>
                 </select>
 
                 {currentTrip.licensePlate === 'NIEUW_KENTEKEN' && (
                     <input
                         type="text"
-                        placeholder="Voer nieuw kenteken in"
+                        placeholder="Bijv. AB-123-C"
                         value={newLicensePlate}
                         onChange={(e) => setNewLicensePlate(e.target.value.toUpperCase())}
                         maxLength={10}
-                        className="mt-2 w-full p-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-3 w-full p-3 bg-white border border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 uppercase shadow-sm"
                     />
                 )}
             </div>
 
-
-            {/* --- Adressen - Van Adres --- */}
-            <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Home className="w-4 h-4 mr-1" /> Van Adres</label>
+            {/* Van Adres */}
+            <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                    <Home className="w-4 h-4 mr-1.5 text-indigo-600" /> Van Adres (Vertrek)
+                </label>
                 <select
                     name="fromAddress"
                     value={currentTrip.fromAddress}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                 >
                     <option value="" disabled>-- Selecteer Vertrekadres --</option>
                     {addresses.map(address => (
                         <option key={`from-${address}`} value={address}>{address}</option>
                     ))}
-                    <option value="NIEUW_ADRES">--- Nieuw Adres Invoeren ---</option>
+                    <option value="NIEUW_ADRES">➕ Nieuw Adres Invoeren</option>
                 </select>
                  {currentTrip.fromAddress === 'NIEUW_ADRES' && (
                     <input
                         type="text"
-                        placeholder="Voer nieuw vertrekadres in"
+                        placeholder="Straat en plaats..."
                         value={newFromAddressName}
                         onChange={(e) => setNewFromAddressName(e.target.value)}
-                        className="mt-2 w-full p-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-2 w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                 )}
             </div>
             
-            {/* --- Adressen - Naar Adres --- */}
-            <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Building className="w-4 h-4 mr-1" /> Naar Adres</label>
+            {/* Naar Adres */}
+            <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                    <Building className="w-4 h-4 mr-1.5 text-indigo-600" /> Naar Adres (Bestemming)
+                </label>
                  <select
                     name="toAddress"
                     value={currentTrip.toAddress}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                 >
                     <option value="" disabled>-- Selecteer Bestemmingsadres --</option>
                     {addresses.map(address => (
                         <option key={`to-${address}`} value={address}>{address}</option>
                     ))}
-                    <option value="NIEUW_ADRES">--- Nieuw Adres Invoeren ---</option>
+                    <option value="NIEUW_ADRES">➕ Nieuw Adres Invoeren</option>
                 </select>
                 {currentTrip.toAddress === 'NIEUW_ADRES' && (
                     <input
                         type="text"
-                        placeholder="Voer nieuw bestemmingsadres in"
+                        placeholder="Straat en plaats..."
                         value={newToAddressName}
                         onChange={(e) => setNewToAddressName(e.target.value)}
-                        className="mt-2 w-full p-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-2 w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                 )}
             </div>
 
-            {/* --- Afspraak Tijd --- */}
-            <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Calendar className="w-4 h-4 mr-1" /> Afspraak Datum & Tijd</label>
-                <div className="flex space-x-2">
+            {/* Afspraak Tijd */}
+            <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                    <Calendar className="w-4 h-4 mr-1.5 text-indigo-600" /> Afspraak Datum & Tijd
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
                     <input
                         type="date"
                         name="appointmentDate"
                         value={currentTrip.appointmentDate}
                         onChange={handleChange}
-                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="flex-1 p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                     <input
                         type="time"
                         name="appointmentTime"
                         value={currentTrip.appointmentTime}
                         onChange={handleChange}
-                        className="w-24 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="sm:w-32 p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                 </div>
             </div>
 
-            {/* --- Start Tijd (Met automatische invoer) --- */}
-            <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Clock className="w-4 h-4 mr-1" /> Start Datum & Tijd</label>
-                <div className="flex space-x-2">
+            {/* Start Tijd */}
+            <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                        <Clock className="w-4 h-4 mr-1.5 text-indigo-600" /> Start Tijd
+                    </label>
+                    <button
+                        onClick={handleStartNow}
+                        type="button"
+                        className="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg font-medium hover:bg-emerald-200 transition"
+                    >
+                        ⏱️ Nu Starten
+                    </button>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
                     <input
                         type="date"
                         name="startDate"
                         value={currentTrip.startDate}
                         onChange={handleChange}
-                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="flex-1 p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                     <input
                         type="time"
                         name="startTime"
                         value={currentTrip.startTime}
                         onChange={handleChange}
-                        className="w-24 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="sm:w-32 p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                 </div>
-                <button
-                    onClick={handleStartNow}
-                    type="button"
-                    className="mt-2 w-full flex items-center justify-center bg-green-500 text-white p-2 rounded-lg text-sm hover:bg-green-600 transition duration-150"
-                >
-                    <PlusCircle className="w-4 h-4 mr-1" /> Nu Starten
-                </button>
             </div>
 
-
-            {/* --- Eind Tijd (Met automatische invoer knop) --- */}
-            <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Clock className="w-4 h-4 mr-1" /> Eind Datum & Tijd</label>
-                <div className="flex space-x-2">
+            {/* Eind Tijd */}
+            <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <label className="block text-sm font-semibold text-gray-700 flex items-center">
+                        <Clock className="w-4 h-4 mr-1.5 text-indigo-600" /> Eind Tijd
+                    </label>
+                    <button
+                        onClick={handleEndNow}
+                        type="button"
+                        className="text-xs bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-medium hover:bg-rose-200 transition"
+                    >
+                        🏁 Nu Afronden
+                    </button>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
                     <input
                         type="date"
                         name="endDate"
                         value={currentTrip.endDate}
                         onChange={handleChange}
-                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="flex-1 p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                     <input
                         type="time"
                         name="endTime"
                         value={currentTrip.endTime}
                         onChange={handleChange}
-                        className="w-24 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        className="sm:w-32 p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
                     />
                 </div>
-                <button
-                    onClick={handleEndNow}
-                    type="button"
-                    className="mt-2 w-full flex items-center justify-center bg-red-500 text-white p-2 rounded-lg text-sm hover:bg-red-600 transition duration-150"
-                >
-                    <CheckCircle className="w-4 h-4 mr-1" /> Nu Eindigen
-                </button>
             </div>
-            
-             {/* Leeg element om layout te behouden */}
-            <div className="col-span-1"></div>
 
+            {/* Opmerkingen */}
+            <div className="space-y-2 md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700">Notities / Bijzonderheden</label>
+                <textarea
+                    name="notes"
+                    value={currentTrip.notes || ''}
+                    onChange={handleChange}
+                    rows="2"
+                    placeholder="Eventuele opmerkingen over de rit..."
+                    className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-gray-800 shadow-sm"
+                ></textarea>
+            </div>
 
         </div>
 
-        {/* --- Knoppen --- */}
-        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        {/* Actieknoppen */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
             <button
                 onClick={handleSaveTrip}
                 disabled={isSaving}
-                className="flex-1 flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 disabled:opacity-50"
+                className="flex-1 flex items-center justify-center px-6 py-3.5 text-base font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition duration-150 disabled:opacity-50"
             >
-                {isSaving ? (
-                    <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                ) : (
-                    <Save className="w-5 h-5 mr-2" />
-                )}
-                {editingId ? 'Bewaar Wijzigingen' : 'Bewaar Nieuwe Rit'}
+                {isSaving ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                {editingId ? 'Wijzigingen Opslaan' : 'Rit Opslaan'}
             </button>
             <button
                 onClick={handleNewTrip}
                 type="button"
-                className="flex-1 flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 transition duration-150"
+                className="flex-1 flex items-center justify-center px-6 py-3.5 text-base font-semibold rounded-xl text-gray-700 bg-gray-100 hover:bg-gray-200 transition duration-150"
             >
-                <PlusCircle className="w-5 h-5 mr-2" /> Nieuwe Rit
+                <PlusCircle className="w-5 h-5 mr-2" /> Formulier Leegmaken
             </button>
         </div>
     </div>
 ));
-
 
 // --- HOOFD COMPONENT ---
 const App = () => {
@@ -321,22 +342,58 @@ const App = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     
-    // STATE VOOR NIEUWE CHAUFFEUR, ADRESSEN EN KENTEKEN
+    // PWA Install Prompt State
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+    // Nieuwe input velden
     const [newDriverName, setNewDriverName] = useState('');
     const [newFromAddressName, setNewFromAddressName] = useState('');
     const [newToAddressName, setNewToAddressName] = useState('');
     const [newLicensePlate, setNewLicensePlate] = useState('');
     
+    // Verwijder modal state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [tripToDeleteId, setTripToDeleteId] = useState(null);
 
-    // Haal de publieke paden op (onafhankelijk van userId)
     const paths = useMemo(() => getCollectionPaths(), []);
 
-    // 1. Initialisatie en Authenticatie
+    // 1. PWA Service Worker Registratie & Install Prompt Listener
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', (e) => { e.waitUntil(self.skipWaiting()); });
+                self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
+                self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });
+            `;
+            const blob = new Blob([swCode], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch((err) => console.log('SW registratie mislukt:', err));
+        }
+
+        const handleBeforeInstallPrompt = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setShowInstallBanner(true);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setShowInstallBanner(false);
+        }
+        setDeferredPrompt(null);
+    };
+
+    // 2. Initialisatie en Authenticatie
     useEffect(() => {
         if (!auth) {
-            console.warn("Firebase Auth is niet geïnitialiseerd.");
             setIsAuthReady(true);
             setIsLoading(false);
             return;
@@ -347,7 +404,6 @@ const App = () => {
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    // Nog steeds vereist voor security rules van publieke collectie
                     await signInAnonymously(auth); 
                 }
             } catch (error) {
@@ -356,11 +412,7 @@ const App = () => {
         };
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setUserId(user.uid);
-            } else {
-                setUserId(null);
-            }
+            setUserId(user ? user.uid : null);
             setIsAuthReady(true);
             setIsLoading(false);
         });
@@ -369,38 +421,24 @@ const App = () => {
         return () => unsubscribe();
     }, []);
 
-    // 2. Data Listeners (Trips, Drivers, Adressen & Kentekens)
-    // De listeners wachten op isAuthReady om te zorgen dat de gebruiker is ingelogd
+    // 3. Realtime Firestore Data Listeners
     useEffect(() => {
         if (!isAuthReady || !db) return;
 
-        const { trips: tripsPath, drivers: driversPath, addresses: addressesPath, licensePlates: licensePlatesPath } = paths;
-
-        // Listener 1: Ritten
-        const unsubscribeTrips = onSnapshot(collection(db, tripsPath), (snapshot) => {
-            const fetchedTrips = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            setTrips(fetchedTrips);
+        const unsubscribeTrips = onSnapshot(collection(db, paths.trips), (snapshot) => {
+            setTrips(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         }, (error) => console.error("Fout bij ophalen ritten:", error));
 
-        // Listener 2: Chauffeurs
-        const unsubscribeDrivers = onSnapshot(collection(db, driversPath), (snapshot) => {
-            const fetchedDrivers = snapshot.docs.map(doc => doc.data().name).sort();
-            setDrivers(fetchedDrivers);
+        const unsubscribeDrivers = onSnapshot(collection(db, paths.drivers), (snapshot) => {
+            setDrivers(snapshot.docs.map(doc => doc.data().name).sort());
         }, (error) => console.error("Fout bij ophalen chauffeurs:", error));
         
-        // Listener 3: Adressen
-        const unsubscribeAddresses = onSnapshot(collection(db, addressesPath), (snapshot) => {
-            const fetchedAddresses = snapshot.docs.map(doc => doc.data().name).sort();
-            setAddresses(fetchedAddresses);
+        const unsubscribeAddresses = onSnapshot(collection(db, paths.addresses), (snapshot) => {
+            setAddresses(snapshot.docs.map(doc => doc.data().name).sort());
         }, (error) => console.error("Fout bij ophalen adressen:", error));
 
-        // Listener 4: Kentekens
-        const unsubscribePlates = onSnapshot(collection(db, licensePlatesPath), (snapshot) => {
-            const fetchedPlates = snapshot.docs.map(doc => doc.data().name).sort();
-            setLicensePlates(fetchedPlates);
+        const unsubscribePlates = onSnapshot(collection(db, paths.licensePlates), (snapshot) => {
+            setLicensePlates(snapshot.docs.map(doc => doc.data().name).sort());
         }, (error) => console.error("Fout bij ophalen kentekens:", error));
 
         return () => {
@@ -409,9 +447,8 @@ const App = () => {
             unsubscribeAddresses();
             unsubscribePlates();
         };
-    }, [isAuthReady, paths]); // userId is verwijderd uit dependencies, maar auth is nog steeds vereist
+    }, [isAuthReady, paths]);
 
-    // Functie om velden te resetten voor een nieuwe rit
     const handleNewTrip = () => {
         setCurrentTrip(initialTripState);
         setEditingId(null);
@@ -421,9 +458,8 @@ const App = () => {
         setNewLicensePlate('');
     };
 
-    // Functie om velden in te vullen voor een rit die bewerkt wordt
     const handleEdit = (trip) => {
-        const tripToEdit = {
+        setCurrentTrip({
             ...trip,
             appointmentDate: formatDate(trip.appointmentDate?.toDate()),
             appointmentTime: formatTime(trip.appointmentDate?.toDate()),
@@ -431,26 +467,22 @@ const App = () => {
             startTime: formatTime(trip.startDate?.toDate()),
             endDate: formatDate(trip.endDate?.toDate()),
             endTime: formatTime(trip.endDate?.toDate()),
-        };
-
-        // Reset nieuwe namen/adressen/kentekens state
+            notes: trip.notes || '',
+        });
         setNewDriverName('');
         setNewFromAddressName('');
         setNewToAddressName('');
         setNewLicensePlate('');
-        
-        setCurrentTrip(tripToEdit);
         setEditingId(trip.id);
         setActiveTab('Ritten');
     };
 
-    // Functie voor het daadwerkelijke verwijderen van een rit (na bevestiging)
     const deleteTripConfirmed = async (id) => {
         if (!isAuthReady || !db || !id) return;
         try {
             await deleteDoc(doc(db, paths.trips, id));
         } catch (error) {
-            console.error("Fout bij verwijderen rit:", error);
+            console.error("Fout bij verwijderen:", error);
         }
     };
 
@@ -467,192 +499,106 @@ const App = () => {
         }
     };
 
-    const cancelDelete = () => {
-        setIsDeleteModalOpen(false);
-        setTripToDeleteId(null);
+    const saveNewAddress = async (name) => {
+        if (!name || addresses.includes(name)) return name;
+        await setDoc(doc(db, paths.addresses, name), { name, createdAt: serverTimestamp() });
+        return name;
+    };
+    
+    const saveNewLicensePlate = async (plate) => {
+        const formatted = plate.toUpperCase();
+        if (!formatted || licensePlates.includes(formatted)) return formatted;
+        await setDoc(doc(db, paths.licensePlates, formatted), { name: formatted, createdAt: serverTimestamp() });
+        return formatted;
     };
 
-    // Functie om een nieuw adres toe te voegen aan Firestore
-    const saveNewAddress = async (addressName) => {
-        if (!isAuthReady || !addressName || addresses.includes(addressName)) return addressName;
-        
-        const addressRef = doc(db, paths.addresses, addressName);
-        await setDoc(addressRef, { name: addressName, createdAt: serverTimestamp() });
-        return addressName;
-    }
-    
-    // Functie om een nieuw kenteken toe te voegen aan Firestore
-    const saveNewLicensePlate = async (plate) => {
-        // Zorg ervoor dat het kenteken hoofdletters zijn en niet leeg is
-        const formattedPlate = plate.toUpperCase(); 
-        if (!isAuthReady || !formattedPlate || licensePlates.includes(formattedPlate)) return formattedPlate;
-        
-        const plateRef = doc(db, paths.licensePlates, formattedPlate);
-        await setDoc(plateRef, { name: formattedPlate, createdAt: serverTimestamp() });
-        return formattedPlate;
-    }
-
-
-    // Opslaan van rit en eventueel nieuwe chauffeur/adressen/kenteken
     const handleSaveTrip = async () => {
         if (!isAuthReady || !db || isSaving) return;
         setIsSaving(true);
         
         try {
-            let finalDriverName = currentTrip.driverName;
-            let finalFromAddress = currentTrip.fromAddress;
-            let finalToAddress = currentTrip.toAddress;
-            let finalLicensePlate = currentTrip.licensePlate;
+            let finalDriver = currentTrip.driverName;
+            let finalFrom = currentTrip.fromAddress;
+            let finalTo = currentTrip.toAddress;
+            let finalPlate = currentTrip.licensePlate;
 
-            // 1. Nieuwe chauffeur verwerken
             if (currentTrip.driverName === 'NIEUWE_CHAUFFEUR' && newDriverName) {
-                finalDriverName = newDriverName;
-                const driverRef = doc(db, paths.drivers, newDriverName);
+                finalDriver = newDriverName;
                 if (!drivers.includes(newDriverName)) {
-                    await setDoc(driverRef, { name: newDriverName, createdAt: serverTimestamp() });
+                    await setDoc(doc(db, paths.drivers, newDriverName), { name: newDriverName, createdAt: serverTimestamp() });
                 }
-            } else if (currentTrip.driverName === 'NIEUWE_CHAUFFEUR' && !newDriverName) {
-                console.error("Voer een naam in voor de nieuwe chauffeur.");
-                setIsSaving(false);
-                return;
-            } else if (!currentTrip.driverName) {
-                finalDriverName = "Onbekend";
             }
-            
-            // 2. Nieuw "Van Adres" verwerken
-            if (currentTrip.fromAddress === 'NIEUW_ADRES') {
-                if (!newFromAddressName) {
-                     console.error("Voer een naam in voor het nieuwe vertrekadres.");
-                     setIsSaving(false);
-                     return;
-                }
-                finalFromAddress = await saveNewAddress(newFromAddressName);
-            } else if (!currentTrip.fromAddress) {
-                finalFromAddress = "Onbekend";
+            if (currentTrip.fromAddress === 'NIEUW_ADRES' && newFromAddressName) {
+                finalFrom = await saveNewAddress(newFromAddressName);
+            }
+            if (currentTrip.toAddress === 'NIEUW_ADRES' && newToAddressName) {
+                finalTo = await saveNewAddress(newToAddressName);
+            }
+            if (currentTrip.licensePlate === 'NIEUW_KENTEKEN' && newLicensePlate) {
+                finalPlate = await saveNewLicensePlate(newLicensePlate);
             }
 
-            // 3. Nieuw "Naar Adres" verwerken
-            if (currentTrip.toAddress === 'NIEUW_ADRES') {
-                 if (!newToAddressName) {
-                     console.error("Voer een naam in voor het nieuwe bestemmingsadres.");
-                     setIsSaving(false);
-                     return;
-                }
-                finalToAddress = await saveNewAddress(newToAddressName);
-            } else if (!currentTrip.toAddress) {
-                finalToAddress = "Onbekend";
-            }
-            
-            // 4. Nieuw "Kenteken" verwerken
-            if (currentTrip.licensePlate === 'NIEUW_KENTEKEN') {
-                if (!newLicensePlate) {
-                     console.error("Voer een waarde in voor het nieuwe kenteken.");
-                     setIsSaving(false);
-                     return;
-                }
-                finalLicensePlate = await saveNewLicensePlate(newLicensePlate);
-            } else if (!currentTrip.licensePlate) {
-                finalLicensePlate = "Onbekend";
-            }
-            
-            // 5. Tijdvelden converteren naar Date objecten
             const parseDateTime = (dateStr, timeStr) => {
-                if (!dateStr || !timeStr) return null;
-                const [hours, minutes] = timeStr.split(':').map(Number);
+                if (!dateStr) return null;
+                const [hours, minutes] = (timeStr || '00:00').split(':').map(Number);
                 const date = new Date(dateStr);
                 date.setHours(hours, minutes, 0, 0);
                 return date;
             };
 
             const tripData = {
-                ...currentTrip,
-                driverName: finalDriverName,
-                fromAddress: finalFromAddress,
-                toAddress: finalToAddress,
-                licensePlate: finalLicensePlate,
+                driverName: finalDriver || 'Onbekend',
+                fromAddress: finalFrom || 'Onbekend',
+                toAddress: finalTo || 'Onbekend',
+                licensePlate: finalPlate || 'Onbekend',
+                notes: currentTrip.notes || '',
                 appointmentDate: parseDateTime(currentTrip.appointmentDate, currentTrip.appointmentTime),
                 startDate: parseDateTime(currentTrip.startDate, currentTrip.startTime),
                 endDate: parseDateTime(currentTrip.endDate, currentTrip.endTime),
-                appointmentTime: null,
-                startTime: null,
-                endTime: null,
                 updatedAt: serverTimestamp(),
             };
 
-            // 6. Opslaan in Firestore (gebruikt publieke paden)
             if (editingId) {
-                const tripRef = doc(db, paths.trips, editingId);
-                await setDoc(tripRef, tripData, { merge: true });
+                await setDoc(doc(db, paths.trips, editingId), tripData, { merge: true });
             } else {
                 await addDoc(collection(db, paths.trips), { ...tripData, createdAt: serverTimestamp() });
             }
 
             handleNewTrip();
-            setActiveTab('Overzicht');
-
+            setActiveTab('Ritten Lijst');
         } catch (error) {
-            console.error("Fout bij opslaan rit:", error);
+            console.error("Fout bij opslaan:", error);
         } finally {
             setIsSaving(false);
         }
     };
 
-    // Update de formulierstatus bij input
     const handleChange = (e) => {
         const { name, value } = e.target;
         setCurrentTrip(prev => ({ ...prev, [name]: value }));
-
-        // Specifieke logica voor het resetten van nieuwe naam/adres/kenteken velden
-        if (name === 'driverName' && value !== 'NIEUWE_CHAUFFEUR') {
-            setNewDriverName('');
-        }
-        if (name === 'fromAddress' && value !== 'NIEUW_ADRES') {
-            setNewFromAddressName('');
-        }
-         if (name === 'toAddress' && value !== 'NIEUW_ADRES') {
-            setNewToAddressName('');
-        }
-        if (name === 'licensePlate' && value !== 'NIEUW_KENTEKEN') {
-            setNewLicensePlate('');
-        }
+        if (name === 'driverName' && value !== 'NIEUWE_CHAUFFEUR') setNewDriverName('');
+        if (name === 'fromAddress' && value !== 'NIEUW_ADRES') setNewFromAddressName('');
+        if (name === 'toAddress' && value !== 'NIEUW_ADRES') setNewToAddressName('');
+        if (name === 'licensePlate' && value !== 'NIEUW_KENTEKEN') setNewLicensePlate('');
     };
     
-    // Automatisch invullen van Start Datum/Tijd
     const handleStartNow = () => {
         const now = new Date();
-        const dateString = formatDate(now);
-        const timeString = formatTime(now);
-
-        setCurrentTrip(prev => ({
-            ...prev,
-            startDate: dateString,
-            startTime: timeString
-        }));
+        setCurrentTrip(prev => ({ ...prev, startDate: formatDate(now), startTime: formatTime(now) }));
     };
     
-    // Automatisch invullen van Eind Datum/Tijd
     const handleEndNow = () => {
         const now = new Date();
-        const dateString = formatDate(now);
-        const timeString = formatTime(now);
-
-        setCurrentTrip(prev => ({
-            ...prev,
-            endDate: dateString,
-            endTime: timeString
-        }));
+        setCurrentTrip(prev => ({ ...prev, endDate: formatDate(now), endTime: formatTime(now) }));
     };
 
-    // --- OVERZICHT ANALYSE LOGICA ---
+    // Stiptheidsanalyse berekening
     const analysis = useMemo(() => {
         if (trips.length === 0) return { driverSummary: {}, plateSummary: {}, onTimeStats: { total: 0, early: 0, onTime: 0, late: 0 } };
 
         const driverCounts = {};
         const plateCounts = {};
-        let total = 0;
-        let early = 0;
-        let onTime = 0;
-        let late = 0;
+        let total = 0, early = 0, onTime = 0, late = 0;
 
         trips.forEach(trip => {
             const driver = trip.driverName || 'Onbekend';
@@ -662,341 +608,256 @@ const App = () => {
             plateCounts[plate] = (plateCounts[plate] || 0) + 1;
             
             total++;
-
-            const appointmentTime = trip.appointmentDate?.toDate();
+            const appTime = trip.appointmentDate?.toDate();
             const startTime = trip.startDate?.toDate();
 
-            if (appointmentTime && startTime) {
-                const diffMs = startTime.getTime() - appointmentTime.getTime();
-                const diffMinutes = diffMs / (1000 * 60);
-
-                if (diffMinutes < -15) {
-                    early++;
-                } else if (diffMinutes >= -15 && diffMinutes <= 15) {
-                    onTime++;
-                } else if (diffMinutes > 15) {
-                    late++;
-                }
+            if (appTime && startTime) {
+                const diffMin = (startTime.getTime() - appTime.getTime()) / (1000 * 60);
+                if (diffMin < -15) early++;
+                else if (diffMin <= 15) onTime++;
+                else late++;
             }
         });
-
-        const onTimeStats = {
-            total,
-            early,
-            onTime,
-            late,
-            pctEarly: total ? ((early / total) * 100).toFixed(1) : 0,
-            pctOnTime: total ? ((onTime / total) * 100).toFixed(1) : 0,
-            pctLate: total ? ((late / total) * 100).toFixed(1) : 0,
-        };
 
         return {
             driverSummary: driverCounts,
             plateSummary: plateCounts,
-            onTimeStats,
+            onTimeStats: {
+                total, early, onTime, late,
+                pctEarly: total ? ((early / total) * 100).toFixed(1) : 0,
+                pctOnTime: total ? ((onTime / total) * 100).toFixed(1) : 0,
+                pctLate: total ? ((late / total) * 100).toFixed(1) : 0,
+            }
         };
     }, [trips]);
 
-    // Lader scherm
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <Loader2 className="animate-spin text-indigo-500 w-10 h-10" />
-                <p className="ml-3 text-lg text-gray-700">Laden van gegevens...</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+                <Loader2 className="animate-spin text-indigo-600 w-12 h-12 mb-3" />
+                <p className="text-gray-600 font-medium">Ritten Log wordt geladen...</p>
             </div>
         );
     }
 
-    // 2. Overzicht Tab
-    const OverzichtTab = () => (
-        <div className="space-y-8 p-4 bg-white rounded-xl shadow-lg">
-            {/* Dashboard: Te Laat / Te Vroeg Analyse */}
-            <div className="p-6 bg-indigo-50 rounded-xl shadow-inner">
-                <h2 className="text-2xl font-bold text-indigo-700 mb-4 flex items-center">
-                    <LayoutDashboard className="mr-2" /> Dashboard: Stiptheidsanalyse
-                </h2>
-                {analysis.onTimeStats.total === 0 ? (
-                    <p className="text-gray-500">Er zijn nog geen ritten ingevoerd met afspraak- en starttijden om te analyseren.</p>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <StatCard
-                            title="Te Vroeg"
-                            value={`${analysis.onTimeStats.early} ritten`}
-                            percentage={analysis.onTimeStats.pctEarly}
-                            color="text-red-600"
-                            icon={<XCircle className="w-6 h-6" />}
-                            tooltip="Start meer dan 15 minuten vóór de afspraaktijd."
-                        />
-                         <StatCard
-                            title="Op Tijd"
-                            value={`${analysis.onTimeStats.onTime} ritten`}
-                            percentage={analysis.onTimeStats.pctOnTime}
-                            color="text-green-600"
-                            icon={<CheckCircle className="w-6 h-6" />}
-                            tooltip="Start binnen 15 minuten van de afspraaktijd."
-                        />
-                        <StatCard
-                            title="Te Laat"
-                            value={`${analysis.onTimeStats.late} ritten`}
-                            percentage={analysis.onTimeStats.pctLate}
-                            color="text-amber-600"
-                            icon={<Clock className="w-6 h-6" />}
-                            tooltip="Start meer dan 15 minuten ná de afspraaktijd."
-                        />
-                        <div className="sm:col-span-3 text-center pt-2 text-sm font-medium text-gray-500">
-                             (Totaal geanalyseerde ritten: {analysis.onTimeStats.total})
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Chauffeur Overzicht */}
-            <div className="p-6 bg-white rounded-xl shadow">
-                <h2 className="text-2xl font-bold text-indigo-700 mb-4 flex items-center">
-                    <User className="mr-2" /> Chauffeur Overzicht
-                </h2>
-                {Object.keys(analysis.driverSummary).length === 0 ? (
-                    <p className="text-gray-500">Geen chauffeurs gevonden.</p>
-                ) : (
-                    <ul className="divide-y divide-gray-200">
-                        {Object.entries(analysis.driverSummary).map(([driver, count]) => (
-                            <li key={driver} className="py-3 flex justify-between items-center">
-                                <span className="font-medium text-gray-900">{driver}</span>
-                                <span className="px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-800">{count} ritten</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
+    return (
+        <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-24 md:pb-12">
             
-             {/* Kenteken Overzicht */}
-            <div className="p-6 bg-white rounded-xl shadow">
-                <h2 className="text-2xl font-bold text-indigo-700 mb-4 flex items-center">
-                    <Key className="mr-2" /> Kenteken Overzicht
-                </h2>
-                {Object.keys(analysis.plateSummary).length === 0 ? (
-                    <p className="text-gray-500">Geen kentekens gevonden.</p>
-                ) : (
-                    <ul className="divide-y divide-gray-200">
-                        {Object.entries(analysis.plateSummary).map(([plate, count]) => (
-                            <li key={plate} className="py-3 flex justify-between items-center">
-                                <span className="font-medium text-gray-900">{plate}</span>
-                                <span className="px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-800">{count} ritten</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        </div>
-    );
-
-    // 3. Ritten Lijst (Tabel)
-    const RittenLijstTab = () => (
-        <div className="p-4 bg-white rounded-xl shadow-lg">
-            <h2 className="text-2xl font-bold text-indigo-700 mb-6 flex items-center">
-                <List className="mr-2" /> Alle Gedeelde Ritten ({trips.length})
-            </h2>
-
-            {trips.length === 0 ? (
-                <p className="text-gray-500">Er zijn nog geen ritten ingevoerd.</p>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <TableHeader>Chauffeur</TableHeader>
-                                <TableHeader>Kenteken</TableHeader>
-                                <TableHeader>Afspraak</TableHeader>
-                                <TableHeader>Start</TableHeader>
-                                <TableHeader>Eind</TableHeader>
-                                <TableHeader>Van / Naar</TableHeader>
-                                <TableHeader className="text-right">Acties</TableHeader>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {trips.sort((a, b) => b.appointmentDate?.toDate() - a.appointmentDate?.toDate()).map(trip => (
-                                <tr key={trip.id} className="hover:bg-indigo-50 transition duration-150">
-                                    <TableData className="font-medium text-indigo-600">{trip.driverName}</TableData>
-                                    <TableData className="font-medium text-gray-700">{trip.licensePlate}</TableData>
-                                    <TableData>
-                                        {formatDate(trip.appointmentDate?.toDate())} <br className="md:hidden"/> {formatTime(trip.appointmentDate?.toDate())}
-                                    </TableData>
-                                    <TableData>
-                                        {formatDate(trip.startDate?.toDate())} <br className="md:hidden"/> {formatTime(trip.startDate?.toDate())}
-                                    </TableData>
-                                    <TableData>
-                                        {formatDate(trip.endDate?.toDate())} <br className="md:hidden"/> {formatTime(trip.endDate?.toDate())}
-                                    </TableData>
-                                    <TableData className="text-sm">
-                                        <span className="font-semibold">Van:</span> {trip.fromAddress} <br />
-                                        <span className="font-semibold">Naar:</span> {trip.toAddress}
-                                    </TableData>
-                                    <TableData className="text-right whitespace-nowrap">
-                                        <button
-                                            onClick={() => handleEdit(trip)}
-                                            className="text-indigo-600 hover:text-indigo-900 p-2 rounded-full hover:bg-indigo-200 transition"
-                                            title="Rit Bewerken"
-                                        >
-                                            <Edit className="w-5 h-5 inline" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteClick(trip.id)}
-                                            className="text-red-600 hover:text-red-900 ml-2 p-2 rounded-full hover:bg-red-200 transition"
-                                            title="Rit Verwijderen"
-                                        >
-                                            <Trash2 className="w-5 h-5 inline" />
-                                        </button>
-                                    </TableData>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    );
-    
-    // --- HULPCOMPONENTEN ---
-
-    const TableHeader = ({ children, className = '' }) => (
-        <th className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
-            {children}
-        </th>
-    );
-
-    const TableData = ({ children, className = '' }) => (
-        <td className={`px-4 py-4 whitespace-nowrap text-sm text-gray-500 ${className}`}>
-            {children}
-        </td>
-    );
-
-    const StatCard = ({ title, value, percentage, color, icon, tooltip }) => (
-        <div className="bg-white p-4 rounded-xl shadow hover:shadow-md transition duration-200 border-t-4 border-indigo-400 group relative">
-            <div className="flex justify-between items-center">
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">{title}</p>
-                    <p className="text-2xl font-semibold text-gray-900">{value}</p>
-                </div>
-                <div className={`${color} bg-gray-50 p-2 rounded-full`}>
-                    {icon}
-                </div>
-            </div>
-            <p className="text-xs font-semibold mt-2 text-indigo-600">{percentage}% van de ritten</p>
-
-             {/* Tooltip voor de uitleg */}
-             <div className="absolute left-1/2 -top-10 transform -translate-x-1/2 w-max px-3 py-1 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-none z-10">
-                {tooltip}
-                <div className="absolute w-2 h-2 bg-gray-800 transform rotate-45 bottom-[-4px] left-1/2 -translate-x-1/2"></div>
-            </div>
-        </div>
-    );
-    
-    const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) => {
-        if (!isOpen) return null;
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 transform transition-all">
-                    <div className="flex flex-col items-center text-center">
-                        <AlertTriangle className="w-10 h-10 text-red-500 mb-4" />
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Rit Verwijderen</h3>
-                        <p className="text-gray-600 mb-6">
-                            Weet je zeker dat je deze rit permanent wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.
+            {/* Header */}
+            <header className="bg-indigo-700 text-white shadow-md py-6 px-4 sm:px-8">
+                <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-black flex items-center tracking-tight">
+                            <Navigation className="mr-2 w-7 h-7 text-indigo-300" /> Gedeelde Ritten Log
+                        </h1>
+                        <p className="text-indigo-200 text-xs sm:text-sm mt-1 flex items-center">
+                            <Share2 className="w-3.5 h-3.5 mr-1" /> Realtime gesynchroniseerd op al je apparaten
                         </p>
-                        <div className="flex justify-center w-full space-x-3">
+                    </div>
+
+                    {showInstallBanner && (
+                        <button
+                            onClick={handleInstallClick}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow flex items-center transition animate-bounce"
+                        >
+                            <Download className="w-4 h-4 mr-1.5" /> App Installeren (PWA)
+                        </button>
+                    )}
+                </div>
+            </header>
+
+            {/* Main Container */}
+            <main className="max-w-5xl mx-auto p-3 sm:p-6">
+                
+                {/* Desktop & Tablet Tab Navigatie */}
+                <div className="hidden md:flex bg-white p-1.5 rounded-2xl shadow-sm mb-6 max-w-md mx-auto border border-indigo-50">
+                    <TabButton name="Nieuwe Rit" activeTab={activeTab} setActiveTab={setActiveTab} Icon={PlusCircle} />
+                    <TabButton name="Ritten Lijst" activeTab={activeTab} setActiveTab={setActiveTab} Icon={List} />
+                    <TabButton name="Overzicht" activeTab={activeTab} setActiveTab={setActiveTab} Icon={LayoutDashboard} />
+                </div>
+
+                {/* Tab Inhoud */}
+                <div className="transition-all duration-200">
+                    {activeTab === 'Nieuwe Rit' || activeTab === 'Ritten' ? (
+                        <RittenForm 
+                            currentTrip={currentTrip}
+                            editingId={editingId}
+                            drivers={drivers}
+                            addresses={addresses}
+                            licensePlates={licensePlates}
+                            newDriverName={newDriverName}
+                            setNewDriverName={setNewDriverName}
+                            newFromAddressName={newFromAddressName}
+                            setNewFromAddressName={setNewFromAddressName}
+                            newToAddressName={newToAddressName}
+                            setNewToAddressName={setNewToAddressName}
+                            newLicensePlate={newLicensePlate}
+                            setNewLicensePlate={setNewLicensePlate}
+                            isSaving={isSaving}
+                            handleChange={handleChange}
+                            handleSaveTrip={handleSaveTrip}
+                            handleNewTrip={handleNewTrip}
+                            handleStartNow={handleStartNow}
+                            handleEndNow={handleEndNow}
+                        />
+                    ) : activeTab === 'Ritten Lijst' ? (
+                        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-slate-200 mb-20 md:mb-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center">
+                                    <List className="mr-2 w-6 h-6 text-indigo-600" /> Rittenoverzicht ({trips.length})
+                                </h2>
+                                <button
+                                    onClick={() => { handleNewTrip(); setActiveTab('Nieuwe Rit'); }}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow transition"
+                                >
+                                    + Nieuwe Rit
+                                </button>
+                            </div>
+
+                            {trips.length === 0 ? (
+                                <div className="text-center py-12 text-slate-400">
+                                    <Car className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                    <p>Nog geen ritten ingevoerd.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-100">
+                                        <thead>
+                                            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                                                <th className="px-3 py-3 text-left">Chauffeur</th>
+                                                <th className="px-3 py-3 text-left">Kenteken</th>
+                                                <th className="px-3 py-3 text-left">Afspraak</th>
+                                                <th className="px-3 py-3 text-left hidden sm:table-cell">Route</th>
+                                                <th className="px-3 py-3 text-right">Acties</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-sm">
+                                            {trips.sort((a, b) => (b.appointmentDate?.toDate() || 0) - (a.appointmentDate?.toDate() || 0)).map(trip => (
+                                                <tr key={trip.id} className="hover:bg-indigo-50/40 transition">
+                                                    <td className="px-3 py-4 font-bold text-indigo-700">{trip.driverName}</td>
+                                                    <td className="px-3 py-4 font-mono text-xs bg-slate-100 rounded px-1.5 py-0.5 inline-block mt-3">{trip.licensePlate}</td>
+                                                    <td className="px-3 py-4 text-xs text-slate-600">
+                                                        {formatDate(trip.appointmentDate?.toDate())} <br />
+                                                        <span className="font-semibold">{formatTime(trip.appointmentDate?.toDate())}</span>
+                                                    </td>
+                                                    <td className="px-3 py-4 text-xs text-slate-600 hidden sm:table-cell">
+                                                        <span className="font-medium text-slate-700">Van:</span> {trip.fromAddress} <br />
+                                                        <span className="font-medium text-slate-700">Naar:</span> {trip.toAddress}
+                                                    </td>
+                                                    <td className="px-3 py-4 text-right whitespace-nowrap">
+                                                        <button
+                                                            onClick={() => handleEdit(trip)}
+                                                            className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition"
+                                                            title="Bewerken"
+                                                        >
+                                                            <Edit className="w-4 h-4 inline" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteClick(trip.id)}
+                                                            className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg transition ml-1"
+                                                            title="Verwijderen"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 inline" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-6 mb-20 md:mb-6">
+                            <div className="bg-white rounded-2xl shadow-xl p-6 border border-slate-200">
+                                <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+                                    <LayoutDashboard className="mr-2 w-6 h-6 text-indigo-600" /> Stiptheidsanalyse
+                                </h2>
+                                {analysis.onTimeStats.total === 0 ? (
+                                    <p className="text-slate-500 text-sm">Onvoldoende data voor analyse.</p>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <StatCard title="Te Vroeg (>15m)" count={analysis.onTimeStats.early} pct={analysis.onTimeStats.pctEarly} color="text-rose-600" />
+                                        <StatCard title="Op Tijd (±15m)" count={analysis.onTimeStats.onTime} pct={analysis.onTimeStats.pctOnTime} color="text-emerald-600" />
+                                        <StatCard title="Te Laat (>15m)" count={analysis.onTimeStats.late} pct={analysis.onTimeStats.pctLate} color="text-amber-600" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </main>
+
+            {/* Mobiele Vaste Onderste Navigatiebalk (Bottom Navigation voor Smartphones) */}
+            <nav aria-label="Mobiele Navigatie" className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg flex justify-around p-2 z-40">
+                <MobileTabButton name="Nieuwe Rit" activeTab={activeTab} setActiveTab={setActiveTab} Icon={PlusCircle} />
+                <MobileTabButton name="Ritten Lijst" activeTab={activeTab} setActiveTab={setActiveTab} Icon={List} />
+                <MobileTabButton name="Overzicht" activeTab={activeTab} setActiveTab={setActiveTab} Icon={LayoutDashboard} />
+            </nav>
+
+            {/* Verwijder Bevestiging Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+                        <AlertTriangle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">Rit Verwijderen?</h3>
+                        <p className="text-slate-600 text-sm mb-6">Weet je zeker dat je deze rit wilt wissen?</p>
+                        <div className="flex gap-3">
                             <button
-                                onClick={onConfirm}
-                                className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition"
+                                onClick={confirmDelete}
+                                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow transition"
                             >
                                 Ja, Verwijder
                             </button>
                             <button
-                                onClick={onCancel}
-                                className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition"
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-xl transition"
                             >
-                                Nee, Annuleer
+                                Annuleer
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        );
-    };
-
-
-    // --- HOOFD LAYOUT ---
-    return (
-        <div className="min-h-screen bg-gray-100 font-sans p-4 sm:p-6 md:p-8">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-indigo-800 mb-2">Gedeelde Ritten Log</h1>
-            <div className="text-center text-sm text-gray-500 mb-6 flex items-center justify-center">
-                 <Share2 className="w-4 h-4 mr-1 text-indigo-400" />
-                 Alle gegevens worden publiek gedeeld tussen apparaten.
-            </div>
-            <p className="text-center text-sm text-gray-500 mb-4">Huidige Gebruiker ID: <span className="font-mono text-xs">{userId || 'Niet ingelogd'}</span></p>
-
-
-            {/* Tab Navigatie */}
-            <div className="max-w-4xl mx-auto mb-6 bg-white p-1 rounded-xl shadow-lg flex justify-between space-x-1">
-                <TabButton name="Ritten" activeTab={activeTab} setActiveTab={setActiveTab} Icon={PlusCircle} />
-                <TabButton name="Overzicht" activeTab={activeTab} setActiveTab={setActiveTab} Icon={LayoutDashboard} />
-                <TabButton name="Ritten Lijst" activeTab={activeTab} setActiveTab={setActiveTab} Icon={List} />
-            </div>
-
-            {/* Tab Content */}
-            <div className="max-w-4xl mx-auto">
-                {activeTab === 'Ritten' && (
-                    <RittenForm 
-                        currentTrip={currentTrip}
-                        editingId={editingId}
-                        drivers={drivers}
-                        addresses={addresses}
-                        licensePlates={licensePlates}
-                        newDriverName={newDriverName}
-                        setNewDriverName={setNewDriverName}
-                        newFromAddressName={newFromAddressName}
-                        setNewFromAddressName={setNewFromAddressName}
-                        newToAddressName={newToAddressName}
-                        setNewToAddressName={setNewToAddressName}
-                        newLicensePlate={newLicensePlate}
-                        setNewLicensePlate={setNewLicensePlate}
-                        isSaving={isSaving}
-                        handleChange={handleChange}
-                        handleSaveTrip={handleSaveTrip}
-                        handleNewTrip={handleNewTrip}
-                        handleStartNow={handleStartNow}
-                        handleEndNow={handleEndNow}
-                    />
-                )}
-                {activeTab === 'Overzicht' && <OverzichtTab />}
-                {activeTab === 'Ritten Lijst' && <RittenLijstTab />}
-            </div>
-            
-            {/* Modal for Delete Confirmation */}
-            <ConfirmationModal 
-                isOpen={isDeleteModalOpen}
-                onConfirm={confirmDelete}
-                onCancel={cancelDelete}
-            />
+            )}
         </div>
     );
 };
 
-// Hulpcomponent voor Tab Knoppen
+// Hulpcomponenten voor Tabs en Statistieken
 const TabButton = ({ name, activeTab, setActiveTab, Icon }) => {
-    const isActive = activeTab === name;
+    const isActive = activeTab === name || (name === 'Nieuwe Rit' && activeTab === 'Ritten');
     return (
         <button
-            onClick={() => setActiveTab(name)}
-            className={`flex-1 flex items-center justify-center py-3 px-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                isActive
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-indigo-600'
+            onClick={() => setActiveTab(name === 'Nieuwe Rit' ? 'Ritten' : name)}
+            className={`flex-1 flex items-center justify-center py-2.5 px-4 text-sm font-semibold rounded-xl transition ${
+                isActive ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'
             }`}
         >
-            <Icon className="w-4 h-4 mr-1" />
-            {name}
+            <Icon className="w-4 h-4 mr-2" /> {name}
         </button>
     );
 };
+
+const MobileTabButton = ({ name, activeTab, setActiveTab, Icon }) => {
+    const isActive = activeTab === name || (name === 'Nieuwe Rit' && activeTab === 'Ritten');
+    return (
+        <button
+            onClick={() => setActiveTab(name === 'Nieuwe Rit' ? 'Ritten' : name)}
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-xs font-medium transition ${
+                isActive ? 'text-indigo-600 font-bold' : 'text-slate-500'
+            }`}
+        >
+            <Icon className="w-5 h-5 mb-1" />
+            <span>{name}</span>
+        </button>
+    );
+};
+
+const StatCard = ({ title, count, pct, color }) => (
+    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <p className="text-xs font-medium text-slate-500">{title}</p>
+        <p className={`text-2xl font-black mt-1 ${color}`}>{count} <span className="text-sm font-normal text-slate-600">({pct}%)</span></p>
+    </div>
+);
 
 export default App;
